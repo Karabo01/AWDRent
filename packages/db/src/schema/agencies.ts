@@ -24,6 +24,15 @@ export const agencies = pgTable(
     // Prefix for EFT references: "KL" gives KL-0042
     eftPrefix: text().notNull(),
     smsSenderName: text(),
+    // Shown on receipts, statements and letters (D60)
+    legalName: text(),
+    registrationNo: text(),
+    // Property Practitioners Regulatory Authority Fidelity Fund Certificate
+    ffcNumber: text(),
+    vatNumber: text(),
+    physicalAddress: text(),
+    contactPhone: text(),
+    contactEmail: text(),
     quietHoursStart: time().notNull().default("20:00"),
     quietHoursEnd: time().notNull().default("07:00"),
     plan: text().notNull().default("standard"),

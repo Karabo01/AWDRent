@@ -1,5 +1,6 @@
 import { todayInSouthAfrica } from "@awdrent/core/billing";
 import { getLedger } from "@awdrent/core/ledger";
+import { listReceipts } from "@awdrent/core/receipts";
 import { formatCents } from "@awdrent/core/money";
 import { can } from "@awdrent/core/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,12 +12,20 @@ import { AddChargeForm, VoidChargeButton } from "./account-forms";
 /** The lease's statement: charges, payments, running balance and arrears. */
 export async function AccountCard({ session, leaseId, isDraft }: { session: StaffSession; leaseId: string; isDraft: boolean }) {
   const ledger = await load(() => getLedger(actorOf(session), leaseId));
+  const receipts = await load(() => listReceipts(actorOf(session), leaseId));
   const canCharge = can(session.user.role, "ledger.charge") && !isDraft;
   const canVoid = can(session.user.role, "ledger.void");
   return (
     <Card id="account">
       <CardHeader>
-        <CardTitle>Account</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          Account
+          {!isDraft ? (
+            <a href={`/leases/${leaseId}/statement`} className="text-sm font-normal underline" data-testid="statement-pdf">
+              Statement (PDF)
+            </a>
+          ) : null}
+        </CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         <dl className="grid grid-cols-3 gap-4">
@@ -68,6 +77,22 @@ export async function AccountCard({ session, leaseId, isDraft }: { session: Staf
               ))}
             </TableBody>
           </Table>
+        ) : null}
+        {receipts.length ? (
+          <div className="grid gap-1" data-testid="receipts">
+            <p className="text-sm font-medium">Receipts</p>
+            <ul className="grid gap-1 text-sm">
+              {receipts.map((r) => (
+                <li key={r.id} className={r.cancelledAt ? "text-muted-foreground" : ""}>
+                  <a href={`/documents/${r.documentId}/download`} className="font-mono underline">
+                    {r.receiptNumber}
+                  </a>{" "}
+                  {formatCents(r.amountCents)}
+                  {r.cancelledAt ? ` · cancelled: ${r.cancelReason}` : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
         {canCharge ? (
           <details>

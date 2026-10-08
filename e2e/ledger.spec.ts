@@ -32,6 +32,10 @@ test.describe("lease account", () => {
     await row.getByRole("button", { name: "Void charge" }).click();
     await expect(page.getByTestId("statement")).toContainText("Voided: Wrong meter reading");
     await expect(page.getByTestId("lease-balance")).toHaveText(before);
+
+    // Statement as a branded PDF
+    const [download] = await Promise.all([page.waitForEvent("download"), page.getByTestId("statement-pdf").click()]);
+    expect(download.suggestedFilename()).toMatch(/^Statement KL-\d{4} \d{4}-\d{2}-\d{2}\.pdf$/);
   });
 });
 

@@ -127,3 +127,12 @@ binding until a later entry replaces it.
 |---|-------|----------|
 | D58 | Reviewing a POP | A POP stores what the tenant claims (amount, date, reference) and its file (a virus-scanned lease document). Accounts approve it by choosing a bank line (D33): a waiting line is allocated to the POP's lease as rent there and then; a line already matched to that lease is just linked, so nothing is paid twice. If the bank shows less than claimed the POP is "part paid"; the bank amount is what counts. One bank line proves one POP. Rejection needs a reason (it will be sent to the tenant in step 6). Undoing a bank line returns its POP to the queue. Suggested lines are ranked by same amount, EFT reference, already paid to this lease, and date. |
 | D59 | Who handles POPs | Admins, agents (their portfolio) and accounts can upload a POP on a tenant's behalf; only admins and accounts approve or reject. Tenants upload their own from the portal (step 8) and by email (step 10). |
+
+## 2026-10-08 — Receipts and statements (Phase 2, step 5)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D60 | Agency business details | Agencies record their registered name, company registration number, PPRA Fidelity Fund Certificate number, VAT number, office address, phone and email in Settings. They appear on every generated document (header contact block, legal footer). |
+| D61 | Receipts | The worker issues a receipt every minute for each approved payment received (bank import, POP, manual); opening balances and payments from the deposit get none. Numbered per agency (`{PREFIX}-R000001`), stored as a lease document, never deleted. Each receipt shows what the payment paid for, oldest charge first (D34), with any credit carried and the balance afterwards, which meets the Rental Housing Act's receipt content (date, dwelling, purpose, period). If the payment is later reversed, the receipt is marked cancelled with the reason. Receipts reflect the account when issued; they are not re-issued if earlier entries change. |
+| D62 | Statements | Generated on request from the lease account as a branded PDF (not stored); each generation is audited. Read-only support sessions cannot generate one, because the audit entry is a write. |
+| D63 | PDF generation | `@react-pdf/renderer` (pure JavaScript, no headless browser in the containers), built-in Helvetica. Generated files go straight to the agency's `files/` area without a virus scan, since the platform created them. |

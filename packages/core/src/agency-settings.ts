@@ -8,6 +8,13 @@ import { decrypt, encrypt, last4, normaliseIdentifier } from "./crypto";
 // Plan, limits, address and EFT prefix belong to the platform console.
 
 const TRUST_FIELD = "agencies.trust_account_no";
+const optional = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .default("")
+    .transform((s) => s || null);
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use 24-hour time, e.g. 20:00");
 
 export const agencySettingsSchema = z.object({
@@ -25,6 +32,20 @@ export const agencySettingsSchema = z.object({
     .refine((s) => s === "" || /^\d{6,20}$/.test(s), "Digits only, 6 to 20 of them"),
   quietHoursStart: time,
   quietHoursEnd: time,
+  // Business details printed on receipts, statements and letters (D60)
+  legalName: optional(160),
+  registrationNo: optional(40),
+  ffcNumber: optional(40),
+  vatNumber: optional(20),
+  physicalAddress: optional(300),
+  contactPhone: optional(30),
+  contactEmail: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .default("")
+    .refine((s) => s === "" || z.email().safeParse(s).success, "Enter a valid email address")
+    .transform((s) => s || null),
 });
 export type AgencySettingsInput = z.infer<typeof agencySettingsSchema>;
 
@@ -43,6 +64,13 @@ export async function getAgencySettings(ctx: AgencyContext) {
       quietHoursStart: a.quietHoursStart.slice(0, 5),
       quietHoursEnd: a.quietHoursEnd.slice(0, 5),
       plan: a.plan,
+      legalName: a.legalName,
+      registrationNo: a.registrationNo,
+      ffcNumber: a.ffcNumber,
+      vatNumber: a.vatNumber,
+      physicalAddress: a.physicalAddress,
+      contactPhone: a.contactPhone,
+      contactEmail: a.contactEmail,
     };
   });
 }
@@ -57,6 +85,13 @@ export async function updateAgencySettings(ctx: AgencyContext, input: AgencySett
       trustBankName: input.trustBankName,
       quietHoursStart: input.quietHoursStart,
       quietHoursEnd: input.quietHoursEnd,
+      legalName: input.legalName,
+      registrationNo: input.registrationNo,
+      ffcNumber: input.ffcNumber,
+      vatNumber: input.vatNumber,
+      physicalAddress: input.physicalAddress,
+      contactPhone: input.contactPhone,
+      contactEmail: input.contactEmail,
       ...(input.trustAccountNo
         ? {
             trustAccountNoEnc: encrypt(input.trustAccountNo, { agencyId: ctx.agencyId, field: TRUST_FIELD }),

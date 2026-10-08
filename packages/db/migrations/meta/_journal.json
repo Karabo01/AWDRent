@@ -176,6 +176,20 @@
       "when": 1791484077857,
       "tag": "0024_proofs_of_payment_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791486857177,
+      "tag": "0025_receipts",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791486860510,
+      "tag": "0026_receipts_rls",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,7 @@ export const documentKind = pgEnum("document_kind", [
   "payslip",
   "bank_statement",
   "proof_of_payment",
+  "receipt",
   "other",
 ]);
 

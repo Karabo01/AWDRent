@@ -85,6 +85,17 @@ export async function putQuarantined(agencyId: string, body: Uint8Array, content
   return key;
 }
 
+/**
+ * Stores a file the platform generated itself (receipts, statements, leases)
+ * directly in the agency's files area: it needs no virus scan.
+ */
+export async function putGenerated(agencyId: string, body: Uint8Array, contentType: string, extension: string): Promise<string> {
+  const key = buildKey(agencyId, "files", randomUUID(), extension);
+  const { internal: s3, bucket } = clients();
+  await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
+  return key;
+}
+
 export async function readObject(key: string): Promise<Uint8Array> {
   const { internal: s3, bucket } = clients();
   const res = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));

@@ -3,6 +3,7 @@ import { scanLogo } from "@awdrent/core/branding";
 import { markScanFailed, scanDocument, stalePendingDocuments } from "@awdrent/core/documents";
 import { DOCUMENTS_QUEUE, enqueueScan, MAINTENANCE_QUEUE, redisConnection, type ScanJob } from "@awdrent/core/queue";
 import { runDailyBilling } from "@awdrent/core/ledger";
+import { issueReceipts } from "@awdrent/core/receipts";
 import { snapshotUsage } from "@awdrent/core/usage";
 import { closeDb, schema, withPlatform } from "@awdrent/db";
 import { Queue, Worker } from "bullmq";
@@ -13,7 +14,8 @@ import { eq } from "drizzle-orm";
 //
 // Queues:
 //   documents    virus scan, then promote or delete (retried 5×, then marked failed)
-//   maintenance  repeatable: daily billing (00:15 and 06:15), re-queue stuck scans
+//   maintenance  repeatable: daily billing (00:15 and 06:15), receipts (every minute),
+//                re-queue stuck scans
 //                (every 5 min), usage snapshot (nightly)
 
 const config = env();
@@ -53,6 +55,8 @@ await maintenanceQueue.upsertJobScheduler(
   { pattern: "15 0,6 * * *", tz: "Africa/Johannesburg" },
   { name: "daily-billing" },
 );
+// Receipts for newly approved payments, and cancelling those of reversed ones
+await maintenanceQueue.upsertJobScheduler("issue-receipts", { every: 60_000 }, { name: "issue-receipts" });
 await maintenanceQueue.upsertJobScheduler("sweep-pending-scans", { every: 5 * 60_000 }, { name: "sweep-pending-scans" });
 // 02:00 SAST
 await maintenanceQueue.upsertJobScheduler("usage-snapshot", { pattern: "0 2 * * *", tz: "Africa/Johannesburg" }, { name: "usage-snapshot" });
@@ -84,6 +88,17 @@ const maintenance = new Worker(
         }
       }
       return { escalated, raised };
+    }
+    if (job.name === "issue-receipts") {
+      let issued = 0;
+      for (const agencyId of agencies) {
+        try {
+          issued += (await issueReceipts(agencyId)).issued;
+        } catch (err) {
+          console.error(`[receipts] agency ${agencyId} failed:`, err);
+        }
+      }
+      return { issued };
     }
     if (job.name === "usage-snapshot") {
       for (const agencyId of agencies) await snapshotUsage(agencyId);

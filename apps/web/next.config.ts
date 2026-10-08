@@ -12,6 +12,8 @@ const config: NextConfig = {
   // Workspace packages ship TypeScript source
   transpilePackages: ["@awdrent/config", "@awdrent/core", "@awdrent/db"],
   poweredByHeader: false,
+  // PDF rendering runs on the server only, from node_modules
+  serverExternalPackages: ["@react-pdf/renderer"],
   experimental: {
     // Uploads are capped at 10 MB by the route; this leaves room for multipart overhead
     proxyClientMaxBodySize: "12mb",

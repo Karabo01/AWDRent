@@ -74,6 +74,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 trustAccountMasked: mask(s.trustAccountNoLast4),
                 quietHoursStart: s.quietHoursStart,
                 quietHoursEnd: s.quietHoursEnd,
+                legalName: s.legalName,
+                registrationNo: s.registrationNo,
+                ffcNumber: s.ffcNumber,
+                vatNumber: s.vatNumber,
+                physicalAddress: s.physicalAddress,
+                contactPhone: s.contactPhone,
+                contactEmail: s.contactEmail,
               }}
             />
           </CardContent>

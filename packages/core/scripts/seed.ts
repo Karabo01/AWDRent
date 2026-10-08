@@ -120,6 +120,13 @@ async function seedAgency(spec: (typeof DEMO.agencies)[number], index: number) {
     trustAccountNo: index === 0 ? "62000000001" : "10000000002",
     quietHoursStart: "20:00",
     quietHoursEnd: "07:00",
+    legalName: `${spec.name} (Pty) Ltd`,
+    registrationNo: index === 0 ? "2019/123456/07" : "2016/654321/07",
+    ffcNumber: index === 0 ? "202600012345" : "202600067890",
+    vatNumber: null,
+    physicalAddress: index === 0 ? "5 Jan Smuts Avenue, Parktown, Johannesburg, 2193" : "10 Main Road, Sea Point, Cape Town, 8005",
+    contactPhone: index === 0 ? "011 555 0100" : "021 555 0100",
+    contactEmail: `accounts@${spec.subdomain}.test`,
   });
 
   const city = index === 0 ? "Johannesburg" : "Cape Town";

@@ -54,6 +54,8 @@ describe("staff management", () => {
   });
 });
 
+const noDetails = { legalName: null, registrationNo: null, ffcNumber: null, vatNumber: null, physicalAddress: null, contactPhone: null, contactEmail: null };
+
 describe("agency settings", () => {
   it("encrypts the trust account number and keeps it out of the audit log", async () => {
     await updateAgencySettings(ctxA(), {
@@ -63,6 +65,7 @@ describe("agency settings", () => {
       trustAccountNo: "62001234567",
       quietHoursStart: "20:00",
       quietHoursEnd: "07:00",
+      ...noDetails,
     });
     const [row] = await withAgency(ctxA(), (tx) => tx.select().from(schema.agencies).where(eq(schema.agencies.id, a.agency.id)));
     expect(row?.trustAccountNoEnc).toMatch(/^v\d+:/);
@@ -86,6 +89,7 @@ describe("agency settings", () => {
       trustAccountNo: "",
       quietHoursStart: "21:00",
       quietHoursEnd: "07:00",
+      ...noDetails,
     });
     expect(await trustAccountNumber(ctxA())).toBe("62001234567");
   });

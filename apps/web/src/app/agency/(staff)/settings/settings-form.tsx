@@ -15,6 +15,13 @@ export function SettingsForm({
     trustAccountMasked: string;
     quietHoursStart: string;
     quietHoursEnd: string;
+    legalName: string | null;
+    registrationNo: string | null;
+    ffcNumber: string | null;
+    vatNumber: string | null;
+    physicalAddress: string | null;
+    contactPhone: string | null;
+    contactEmail: string | null;
   };
 }) {
   const [state, action, pending] = useActionState(updateSettingsAction, {});
@@ -47,6 +54,22 @@ export function SettingsForm({
         <Field name="quietHoursStart" label="No messages after" type="time" defaultValue={values.quietHoursStart} state={state} />
         <Field name="quietHoursEnd" label="Until" type="time" defaultValue={values.quietHoursEnd} state={state} />
       </div>
+      <fieldset className="grid gap-4 rounded-md border p-3">
+        <legend className="px-1 text-sm font-medium">Business details on receipts, statements and letters</legend>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="legalName" label="Registered name" defaultValue={values.legalName} state={state} />
+          <Field name="registrationNo" label="Company registration number" defaultValue={values.registrationNo} state={state} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="ffcNumber" label="Fidelity Fund Certificate number" hint="From the PPRA; shown on every document" defaultValue={values.ffcNumber} state={state} />
+          <Field name="vatNumber" label="VAT number" defaultValue={values.vatNumber} state={state} />
+        </div>
+        <Field name="physicalAddress" label="Office address" defaultValue={values.physicalAddress} state={state} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="contactPhone" label="Office phone" type="tel" defaultValue={values.contactPhone} state={state} />
+          <Field name="contactEmail" label="Office email" type="email" defaultValue={values.contactEmail} state={state} />
+        </div>
+      </fieldset>
       <FormMessage state={state} />
       <Button type="submit" disabled={pending} className="justify-self-start">
         Save settings
