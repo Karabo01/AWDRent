@@ -72,6 +72,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 name: s.name,
                 brandColour: s.brandColour,
                 trustBankName: s.trustBankName ?? "",
+                trustAccountHolder: s.trustAccountHolder,
+                trustBranchCode: s.trustBranchCode,
                 trustAccountMasked: mask(s.trustAccountNoLast4),
                 quietHoursStart: s.quietHoursStart,
                 quietHoursEnd: s.quietHoursEnd,

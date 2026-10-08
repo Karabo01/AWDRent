@@ -25,8 +25,11 @@ jobs:
           sed -i "s|^BLIND_INDEX_KEY=.*|BLIND_INDEX_KEY=$(key)|" .env
           sed -i "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(key)|" .env
           sed -i "s|^PLATFORM_AUTH_SECRET=.*|PLATFORM_AUTH_SECRET=$(key)|" .env
+          sed -i "s|^PORTAL_AUTH_SECRET=.*|PORTAL_AUTH_SECRET=$(key)|" .env
           # The end-to-end run signs in more often than the production limit allows
           sed -i "s|^AUTH_RATE_LIMIT_MAX=.*|AUTH_RATE_LIMIT_MAX=100|" .env
+          # Sign-in codes for the portal tests (no Resend or Clickatell keys in CI)
+          sed -i "s|^DEV_OUTBOX_FILE=.*|DEV_OUTBOX_FILE=$GITHUB_WORKSPACE/.dev-outbox.jsonl|" .env
 
       - name: Start backing services
         run: |

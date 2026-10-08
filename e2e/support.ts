@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { expect, type Page } from "@playwright/test";
 import * as OTPAuth from "otpauth";
 import { DEMO, type DemoLogin } from "../packages/core/scripts/demo";
@@ -51,4 +53,20 @@ export function unique(label: string): string {
 /** Status of a same-origin request made by the page (Node cannot resolve *.localhost on every OS). */
 export function statusOf(page: Page, path: string): Promise<number> {
   return page.evaluate(async (p) => (await fetch(p, { redirect: "manual" })).status, path);
+}
+
+/**
+ * The newest message the app "sent" to an address without provider keys
+ * (DEV_OUTBOX_FILE, which the app under test must point at
+ * <repo>/.dev-outbox.jsonl), e.g. a portal sign-in code.
+ */
+export function lastMessageTo(to: string, after: Date): { text: string; subject?: string } | null {
+  const file = process.env.DEV_OUTBOX_FILE ?? path.resolve(".dev-outbox.jsonl");
+  if (!fs.existsSync(file)) return null;
+  const lines = fs.readFileSync(file, "utf8").trim().split("\n").filter(Boolean);
+  for (const line of lines.reverse()) {
+    const m = JSON.parse(line) as { to: string; text: string; subject?: string; sentAt: string };
+    if (m.to === to && new Date(m.sentAt) >= after) return m;
+  }
+  return null;
 }

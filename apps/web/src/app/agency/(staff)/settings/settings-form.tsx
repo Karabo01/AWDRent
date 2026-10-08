@@ -12,6 +12,8 @@ export function SettingsForm({
     name: string;
     brandColour: string;
     trustBankName: string;
+    trustAccountHolder: string | null;
+    trustBranchCode: string | null;
     trustAccountMasked: string;
     quietHoursStart: string;
     quietHoursEnd: string;
@@ -46,6 +48,10 @@ export function SettingsForm({
           autoComplete="off"
           state={state}
         />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field name="trustAccountHolder" label="Account holder" hint="As the bank shows it" defaultValue={values.trustAccountHolder} state={state} />
+        <Field name="trustBranchCode" label="Branch code" inputMode="numeric" defaultValue={values.trustBranchCode} state={state} />
       </div>
       <p className="text-xs text-muted-foreground">
         Tenants are shown the trust account for rent payments, and its statements are imported for matching.

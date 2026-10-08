@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * The short receipt link in payment SMSes (/r/KL-R000123). The link holds
- * no secret: staff go to the lease's account; tenants sign in to the portal.
+ * no secret: staff go to the lease's account; tenants sign in to the portal
+ * and get the receipt.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ number: string }> }) {
   const agency = await currentAgency();
@@ -20,5 +21,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ num
     const leaseId = await receiptLeaseId(actorOf(staff.session), number).catch(() => null);
     if (leaseId) return NextResponse.redirect(`${origin}/leases/${leaseId}#account`);
   }
-  return NextResponse.redirect(`${origin}/p?receipt=${encodeURIComponent(number)}`);
+  // Tenants: the receipt itself, after portal sign-in
+  return NextResponse.redirect(`${origin}/p/receipts/${encodeURIComponent(number)}`);
 }

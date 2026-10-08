@@ -31,10 +31,10 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(({ entry, userName }) => (
+          {rows.map(({ entry, userName, portalName }) => (
             <TableRow key={entry.id} className="align-top">
               <TableCell className="whitespace-nowrap">{dateTime.format(entry.createdAt)}</TableCell>
-              <TableCell>{entry.supportSessionId ? "AWDTECH support" : (userName ?? "System")}</TableCell>
+              <TableCell>{entry.supportSessionId ? "AWDTECH support" : (userName ?? (portalName ? `${portalName} (tenant portal)` : "System"))}</TableCell>
               <TableCell className="font-mono text-xs">{entry.action}</TableCell>
               <TableCell>
                 {entry.before || entry.after ? (

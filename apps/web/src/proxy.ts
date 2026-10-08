@@ -22,6 +22,7 @@ export function proxy(request: NextRequest) {
 
   if (pathname.startsWith("/api/auth/")) return host.kind === "agency" ? NextResponse.next() : notFound();
   if (pathname.startsWith("/api/platform-auth/")) return host.kind === "platform" ? NextResponse.next() : notFound();
+  if (pathname.startsWith("/api/portal-auth/")) return host.kind === "agency" ? NextResponse.next() : notFound();
   // Provider delivery reports: one fixed URL each, on the admin host; verified in the handler
   if (pathname.startsWith("/api/webhooks/")) return host.kind === "platform" ? NextResponse.next() : notFound();
 

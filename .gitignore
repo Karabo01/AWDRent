@@ -16,3 +16,6 @@ e2e/.auth/
 # Real agency documents (personal data) are never committed
 docs/*.pdf
 docs/*.docx
+
+# Messages from end-to-end runs (DEV_OUTBOX_FILE)
+.dev-outbox.jsonl
