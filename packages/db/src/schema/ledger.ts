@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, date, foreignKey, index, integer, pgEnum, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { agencyColumn, createdBy, pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
+import { bankLines } from "./banking";
 import { leases } from "./leases";
 
 // The rent ledger. A lease's balance is always charges (not voided) minus
@@ -72,7 +73,7 @@ export const payments = pgTable(
     paidOn: date().notNull(),
     source: paymentSource().notNull(),
     status: paymentStatus().notNull().default("pending"),
-    // Set in Phase 2 step 3 (bank statement import)
+    // The trust-account statement line this payment came from (D33)
     bankLineId: uuid(),
     reference: text(),
     notes: text(),
@@ -87,6 +88,9 @@ export const payments = pgTable(
   (t) => [
     index("payments_agency_lease_paid_idx").on(t.agencyId, t.leaseId, t.paidOn),
     unique("payments_agency_id_id_key").on(t.agencyId, t.id),
+    // A bank line pays for one thing at a time
+    uniqueIndex("payments_agency_bank_line_live_key").on(t.agencyId, t.bankLineId).where(sql`${t.status} = 'approved'`),
+    foreignKey({ name: "payments_bank_line_fk", columns: [t.agencyId, t.bankLineId], foreignColumns: [bankLines.agencyId, bankLines.id] }),
     foreignKey({ name: "payments_lease_fk", columns: [t.agencyId, t.leaseId], foreignColumns: [leases.agencyId, leases.id] }),
     check("payments_amount_range", sql`${t.amountCents} > 0 and ${t.amountCents} <= 1000000000`),
     check("payments_approved_fields", sql`(${t.status}::text in ('approved', 'reversed')) = (${t.approvedAt} is not null)`),

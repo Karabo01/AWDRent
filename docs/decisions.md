@@ -103,7 +103,8 @@ binding until a later entry replaces it.
 | D48 | Landlord signatory | Per lease: either the owner signs personally, or the agent signs on the owner's behalf under the agency's mandate. |
 | D49 | Signing order | Tenant (and co-tenants), then owner (when the owner signs), then agent. Each is invited only after the previous signer has signed. |
 | D50 | Agency branding | Everything tenants, owners and applicants see carries the agency's branding: portal, emails, PDFs, signing pages. The agency uploads its logo and sets its colour in Settings. |
-| D51 | Lease template | The agency has a lease it must keep; its merge fields are built from that document once received. |
+| D51 | Lease template | The document the agency supplied was a lease confirmation letter, not a lease agreement. AWDRent therefore ships a standard South African residential lease (written to the Rental Housing Act's required content), which each agency can adapt as its own template. To be reviewed by the agency's attorney before use; not legal advice. |
+| D54 | Lease confirmation letter | A second generated document: a branded "to whom it may concern" letter confirming address, agent, agency, lease dates and tenants, e-signed by the agent and an authorised representative of the agency. |
 
 ## 2026-10-08 — Deposits (Phase 2, step 2)
 
@@ -111,3 +112,11 @@ binding until a later entry replaces it.
 |---|-------|----------|
 | D52 | Reversing a payment | An approved payment is never edited; it can only be reversed, with a reason (bounced EFT, wrong match, voided deposit deduction). Reversed payments stay on the statement and no longer count. Enforced by a database trigger. |
 | D53 | Deposit entries | Received, interest (D40), deductions and refund entries; held = received + interest − deductions − refunds, always computed. Deductions only once notice is given or the lease has closed; refunds only after it has closed; never more than is held. A deduction for unpaid rent also posts a "paid from deposit" payment to the rent ledger; voiding that deduction reverses the payment. Admins and accounts manage deposits; agents can see them. Deposit receipts will be linked to bank lines in step 3. |
+
+## 2026-10-08 — Bank statements (Phase 2, step 3)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D55 | What is imported | Only money in (credits) from the trust-account CSV; money out is counted and skipped. Each line gets a fingerprint (date, amount, reference, description, and its order among identical lines), so a re-imported or overlapping statement never creates a second payment. The exact same file is refused. Nothing is imported if any row cannot be read. |
+| D56 | Automatic matching | A line whose reference or description contains exactly one lease's EFT reference (spaces, dashes and dots tolerated; a longer number does not match) becomes an approved rent payment for the line's full amount. Lines naming no lease, or more than one, wait for accounts. Deposits are allocated by hand. |
+| D57 | Manual resolution | Accounts and admins allocate a waiting line to a lease's rent (active leases) or deposit (any lease), or ignore it with a reason. Any of these can be undone with a reason: the payment is reversed (D52) or the deposit entry voided. A bank line pays for one thing at a time (database unique index); its date, amount and reference never change. Splitting one line across leases is not supported yet. |
