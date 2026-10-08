@@ -103,6 +103,11 @@ function columns(agencyId: string, input: TenantInput, existingConsentAt: Date |
 // Correlated subqueries name the outer table explicitly: in a single-table
 // select Drizzle renders ${table.column} unqualified, which would bind to the
 // subquery's own column.
+/** Insert values for a new tenant (shared with the CSV import). */
+export function tenantInsertValues(agencyId: string, input: TenantInput) {
+  return columns(agencyId, input, null);
+}
+
 export async function listTenants(actor: Actor, opts: { q?: string } = {}) {
   authorise(actor, "records.view");
   return withAgency(actor.ctx, async (tx) => {

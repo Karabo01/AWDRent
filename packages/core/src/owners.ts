@@ -149,12 +149,32 @@ function ownerColumns(input: OwnerInput) {
   };
 }
 
+/** Insert values for an owner (shared with the CSV import). */
+export function ownerInsertValues(agencyId: string, input: OwnerInput) {
+  return { ...ownerColumns(input), ...identityColumns(agencyId, input) };
+}
+
+/** Bank columns, account number encrypted (shared with the CSV import). */
+export function ownerBankValues(agencyId: string, input: OwnerBankInput) {
+  return {
+    bankName: input.bankName,
+    bankBranchCode: input.bankBranchCode,
+    bankAccountHolder: input.bankAccountHolder,
+    ...(input.bankAccountNo
+      ? {
+          bankAccountNoEnc: encrypt(input.bankAccountNo, { agencyId, field: BANK_FIELD }),
+          bankAccountNoLast4: last4(input.bankAccountNo),
+        }
+      : {}),
+  };
+}
+
 export async function createOwner(actor: Actor, input: OwnerInput): Promise<string> {
   authorise(actor, "records.edit");
   return withAgency(actor.ctx, async (tx) => {
     const [row] = await tx
       .insert(schema.owners)
-      .values({ ...ownerColumns(input), ...identityColumns(actor.ctx.agencyId, input) })
+      .values(ownerInsertValues(actor.ctx.agencyId, input))
       .returning();
     if (!row) throw new Error("insert failed");
     await audit(tx, { action: "owner.created", entity: "owner", entityId: row.id, after: present(row) });
@@ -182,20 +202,9 @@ export async function updateOwnerBank(actor: Actor, ownerId: string, input: Owne
   await withAgency(actor.ctx, async (tx) => {
     await assertOwnerInScope(tx, actor, ownerId);
     const [before] = await tx.select().from(schema.owners).where(eq(schema.owners.id, ownerId)).for("update");
-    const account = input.bankAccountNo
-      ? {
-          bankAccountNoEnc: encrypt(input.bankAccountNo, { agencyId: actor.ctx.agencyId, field: BANK_FIELD }),
-          bankAccountNoLast4: last4(input.bankAccountNo),
-        }
-      : {};
     const [after] = await tx
       .update(schema.owners)
-      .set({
-        bankName: input.bankName,
-        bankBranchCode: input.bankBranchCode,
-        bankAccountHolder: input.bankAccountHolder,
-        ...account,
-      })
+      .set(ownerBankValues(actor.ctx.agencyId, input))
       .where(eq(schema.owners.id, ownerId))
       .returning();
     const diff = changes(present(before!), present(after!));

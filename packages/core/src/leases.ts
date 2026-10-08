@@ -32,11 +32,18 @@ const optionalDate = z
   .transform((s) => s.trim())
   .refine((s) => s === "" || isoDate.safeParse(s).success, "Choose a valid date")
   .transform((s) => s || null);
+/** R10 million: far above any rent or deposit, well inside a 32-bit cents column. */
+const MAX_CENTS = 1_000_000_000;
+
 const rand = (label: string) =>
   z.string().transform((s, ctx) => {
     const cents = parseRandToCents(s);
     if (cents === null) {
       ctx.addIssue({ code: "custom", message: `Enter the ${label} in rand, e.g. 7500 or 7500.50` });
+      return z.NEVER;
+    }
+    if (cents > MAX_CENTS) {
+      ctx.addIssue({ code: "custom", message: "That is more than R10 million" });
       return z.NEVER;
     }
     return cents;
@@ -164,7 +171,7 @@ async function recordEvent(
 }
 
 /** Unit status follows its live leases; maintenance is left alone. */
-async function syncUnitStatus(tx: Tx, unitId: string): Promise<void> {
+export async function syncUnitStatus(tx: Tx, unitId: string): Promise<void> {
   const live = await tx
     .select({ status: schema.leases.status })
     .from(schema.leases)

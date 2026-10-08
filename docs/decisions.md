@@ -52,3 +52,10 @@ binding until a later entry replaces it.
 | D23 | Upload pipeline | Type is detected from the file's bytes (PDF, JPEG, PNG only), 10 MB limit. Files land in `agencies/{id}/quarantine/`, are scanned by ClamAV in the worker (5 attempts, then marked "could not be checked"), and move to `agencies/{id}/files/` when clean. Infected files are deleted. A sweep every 5 minutes re-queues scans that were never queued (e.g. Redis was down). |
 | D24 | Downloads | Only clean files, through `/documents/{id}/download`, which checks access, writes an audit entry and redirects to a 5-minute signed link. Read-only support sessions cannot download (the audit entry is a write). Only admins delete documents. |
 | D25 | Object storage — **open** | Open-source MinIO is archived and no longer receives security updates (dl.min.io, 2026). The code uses plain S3 calls, so any S3-compatible store works. Needs a decision before go-live; see the Phase 1 summary. Local testing used SeaweedFS. |
+
+## 2026-10-08 — CSV import (step 10)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D26 | Import design | Five CSV templates linked by the agency's own reference codes (see `docs/import-template.md`). "Check files" validates with the form rules and writes nothing; "Import" re-checks and imports in one transaction, all or nothing. Runs in the web request (up to 5,000 rows per file, 2 MB per file) rather than the worker: one-off, small, and the admin sees the result immediately. Every attempt is recorded in `import_jobs` (failures store file/row/column only, no cell values). |
+| D27 | Money limits | Rent and deposit are capped at R10 million so no amount can overflow its column; checked by the form/import rules before the database. |

@@ -15,6 +15,8 @@ const config: NextConfig = {
   experimental: {
     // Uploads are capped at 10 MB by the route; this leaves room for multipart overhead
     proxyClientMaxBodySize: "12mb",
+    // CSV imports: five files of up to 2 MB each
+    serverActions: { bodySizeLimit: "11mb" },
   },
   async headers() {
     return [
