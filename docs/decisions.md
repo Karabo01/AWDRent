@@ -18,3 +18,10 @@ binding until a later entry replaces it.
 | D9 | CI | GitHub Actions workflow in the repo. No remote yet. |
 | D10 | Domains | `{agency}.awdrent.co.za` for agencies, `admin.awdrent.co.za` for the platform console; `{agency}.localhost:3000` and `admin.localhost:3000` locally. DNS is hosted at Afrihost. Wildcard TLS needs a DNS-01 challenge; see README for the recommended `_acme-challenge` CNAME delegation so renewals are automatic. |
 | D11 | Percentages | Stored as integer basis points (10.5% = 1050). Money is integer cents (ZAR). |
+
+## 2026-10-08 — Database foundation (step 2)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D12 | Login tables | Better Auth's session, account, verification and two-factor tables have no `agency_id` (staff `auth_sessions` does carry one). They are readable only by the `awdrent_auth` role; the app role has no grants on them and RLS is on with no app policy. The platform admin TOTP secret lives in `platform_two_factors` (encrypted by Better Auth), not in a `platform_admins.totp_secret` column. |
+| D13 | Cross-agency references | Every foreign key between agency-scoped tables is composite on `(agency_id, id)`. Postgres checks foreign keys without RLS, so a plain `owner_id` reference could point at another agency's row. |
