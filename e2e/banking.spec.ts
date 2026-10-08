@@ -14,6 +14,8 @@ test.describe("banking", () => {
     const add = page.locator("form").last();
     await add.getByLabel("Name").fill(format);
     await add.getByLabel("Date order").selectOption("YMD");
+    // The description carries a per-run marker, so each run's lines are new
+    await add.getByLabel("Description column (optional)").fill("Description");
     await add.getByRole("button", { name: "Save bank format" }).click();
     await expect(page).toHaveURL(/\/banking$/);
 

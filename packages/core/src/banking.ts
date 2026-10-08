@@ -305,7 +305,7 @@ export async function listImports(actor: Actor) {
   );
 }
 
-async function lockLine(tx: Tx, lineId: string) {
+export async function lockLine(tx: Tx, lineId: string) {
   const [line] = await tx.select().from(schema.bankLines).where(eq(schema.bankLines.id, lineId)).for("update");
   if (!line) throw new NotFoundError("Bank line");
   return line;
@@ -316,6 +316,20 @@ export async function allocateLine(actor: Actor, lineId: string, leaseId: string
   authorise(actor, "payments.approve");
   await withAgency(actor.ctx, async (tx) => {
     const line = await lockLine(tx, lineId);
+    await allocateLineInTx(tx, actor, line, leaseId, target);
+  });
+}
+
+/** Allocation inside the caller's transaction (also used when approving a POP). */
+export async function allocateLineInTx(
+  tx: Tx,
+  actor: Actor,
+  line: typeof schema.bankLines.$inferSelect,
+  leaseId: string,
+  target: "rent" | "deposit",
+): Promise<void> {
+  {
+    const lineId = line.id;
     if (line.status !== "unmatched") throw new LedgerRuleError("This line has already been dealt with.");
     await assertLeaseInScope(tx, actor, leaseId);
     const [lease] = await tx.select({ status: schema.leases.status }).from(schema.leases).where(eq(schema.leases.id, leaseId));
@@ -338,7 +352,7 @@ export async function allocateLine(actor: Actor, lineId: string, leaseId: string
       .set({ status: "matched", matchedLeaseId: leaseId, autoMatched: false, resolvedAt: sql`now()`, resolvedBy: actor.userId })
       .where(eq(schema.bankLines.id, lineId));
     await audit(tx, { action: `bank.line_allocated_${target}`, entity: "bank_line", entityId: lineId, after: { leaseId, amountCents: line.amountCents } });
-  });
+  }
 }
 
 /** Marks a line as not rent (e.g. an owner's own transfer), with a reason. */
@@ -391,6 +405,11 @@ export async function unallocateLine(actor: Actor, lineId: string, reason: strin
       .update(schema.bankLines)
       .set({ status: "unmatched", matchedLeaseId: null, autoMatched: false, ignoredReason: null, resolvedAt: null, resolvedBy: null })
       .where(eq(schema.bankLines.id, lineId));
+    // A POP proven by this line goes back to the queue (D33)
+    await tx
+      .update(schema.proofsOfPayment)
+      .set({ status: "pending", bankLineId: null, approvedCents: null, reviewedAt: null, reviewedBy: null })
+      .where(eq(schema.proofsOfPayment.bankLineId, lineId));
     await audit(tx, { action: "bank.line_unallocated", entity: "bank_line", entityId: lineId, before: { status: line.status, leaseId: line.matchedLeaseId }, after: { reason } });
   });
 }

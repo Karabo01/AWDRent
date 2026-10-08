@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, integer, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { check, foreignKey, index, integer, pgEnum, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
 import { agencyColumn, createdBy, pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
 import { leases, tenants } from "./leases";
@@ -14,6 +14,7 @@ export const documentKind = pgEnum("document_kind", [
   "proof_of_address",
   "payslip",
   "bank_statement",
+  "proof_of_payment",
   "other",
 ]);
 
@@ -58,6 +59,7 @@ export const documents = pgTable(
     ),
     check("documents_size_limit", sql`${t.sizeBytes} > 0 and ${t.sizeBytes} <= 10485760`),
     check("documents_file_key_prefix", sql`${t.fileKey} like 'agencies/' || ${t.agencyId}::text || '/%'`),
+    unique("documents_agency_id_id_key").on(t.agencyId, t.id),
     index("documents_agency_owner_idx").on(t.agencyId, t.ownerId),
     index("documents_agency_property_idx").on(t.agencyId, t.propertyId),
     index("documents_agency_unit_idx").on(t.agencyId, t.unitId),

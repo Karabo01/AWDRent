@@ -5,6 +5,7 @@ import { z } from "zod";
 import { audit } from "./audit";
 import { scanBuffer } from "./clamav";
 import { cleanFilename, detectFileType } from "./file-types";
+import type { Action } from "./permissions";
 import {
   type Actor,
   assertLeaseInScope,
@@ -94,8 +95,9 @@ export async function listDocuments(actor: Actor, subject: Subject) {
 export async function uploadDocument(
   actor: Actor,
   input: { subject: Subject; kind: DocumentKind; filename: string; bytes: Uint8Array },
+  permission: Action = "documents.upload",
 ): Promise<string> {
-  authorise(actor, "documents.upload");
+  authorise(actor, permission);
   if (input.bytes.byteLength === 0) throw new UploadRejectedError("The file is empty.");
   if (input.bytes.byteLength > MAX_UPLOAD_BYTES) throw new UploadRejectedError("Files can be at most 10 MB.");
   const type = detectFileType(input.bytes);

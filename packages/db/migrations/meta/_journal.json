@@ -162,6 +162,20 @@
       "when": 1791483359836,
       "tag": "0022_banking_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791484074512,
+      "tag": "0023_proofs_of_payment",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791484077857,
+      "tag": "0024_proofs_of_payment_rls",
+      "breakpoints": true
     }
   ]
 }

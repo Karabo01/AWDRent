@@ -38,5 +38,6 @@ export const DOCUMENT_KIND_LABEL: Record<string, string> = {
   proof_of_address: "Proof of address",
   payslip: "Payslip",
   bank_statement: "Bank statement",
+  proof_of_payment: "Proof of payment",
   other: "Other",
 };

@@ -13,6 +13,7 @@ import { actorOf, load } from "@/server/actor";
 import { requireCan } from "@/server/session";
 import { AccountCard } from "./account-card";
 import { DepositCard } from "./deposit-card";
+import { PopsCard } from "./pops-card";
 import { AmendLeaseForm, LeaseStepButton, NoticeForm, RenewLeaseForm, TerminateForm } from "../lease-forms";
 
 export const metadata = { title: "Lease" };
@@ -27,11 +28,11 @@ export default async function LeasePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ upload?: string }>;
+  searchParams: Promise<{ upload?: string; pop?: string }>;
 }) {
   const s = await requireCan("records.view");
   const { id } = await params;
-  const { upload } = await searchParams;
+  const { upload, pop } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const { lease: l, unitLabel, propertyId, propertyName, tenants, events } = await load(() => getLease(actorOf(s), id));
   const canEdit = can(s.user.role, "records.edit");
@@ -117,6 +118,7 @@ export default async function LeasePage({
 
       <AccountCard session={s} leaseId={l.id} isDraft={l.status === "draft"} />
       <DepositCard session={s} leaseId={l.id} />
+      <PopsCard session={s} leaseId={l.id} result={pop} />
 
       {canEdit && !closed ? (
         <Card>
