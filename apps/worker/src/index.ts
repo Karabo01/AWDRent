@@ -4,6 +4,7 @@ import { markScanFailed, scanDocument, stalePendingDocuments } from "@awdrent/co
 import { DOCUMENTS_QUEUE, enqueueScan, MAINTENANCE_QUEUE, redisConnection, type ScanJob } from "@awdrent/core/queue";
 import { runDailyBilling } from "@awdrent/core/ledger";
 import { deliverDue } from "@awdrent/core/messages";
+import { runDailyNotices } from "@awdrent/core/notices";
 import { issueReceipts } from "@awdrent/core/receipts";
 import { snapshotUsage } from "@awdrent/core/usage";
 import { closeDb, schema, withPlatform } from "@awdrent/db";
@@ -16,7 +17,7 @@ import { eq } from "drizzle-orm";
 // Queues:
 //   documents    virus scan, then promote or delete (retried 5×, then marked failed)
 //   maintenance  repeatable: daily billing (00:15 and 06:15), receipts (every minute),
-//                message delivery (every 20 s), re-queue stuck scans (every 5 min),
+//                daily notices (07:30, catch-up 12:30), message delivery (every 20 s), re-queue stuck scans (every 5 min),
 //                usage snapshot (nightly)
 
 const config = env();
@@ -55,6 +56,13 @@ await maintenanceQueue.upsertJobScheduler(
   "daily-billing",
   { pattern: "15 0,6 * * *", tz: "Africa/Johannesburg" },
   { name: "daily-billing" },
+);
+// Reminders, overdue escalation, lease expiry and escalation notices (D72). Each notice is
+// recorded once, so the 12:30 run only catches up what a missed 07:30 run did not send
+await maintenanceQueue.upsertJobScheduler(
+  "daily-notices",
+  { pattern: "30 7,12 * * *", tz: "Africa/Johannesburg" },
+  { name: "daily-notices" },
 );
 // Receipts for newly approved payments, and cancelling those of reversed ones
 await maintenanceQueue.upsertJobScheduler("issue-receipts", { every: 60_000 }, { name: "issue-receipts" });
@@ -102,6 +110,20 @@ const maintenance = new Worker(
         }
       }
       return { issued };
+    }
+    if (job.name === "daily-notices") {
+      const totals = { notices: 0, messages: 0, failed: 0 };
+      for (const agencyId of agencies) {
+        try {
+          const r = await runDailyNotices(agencyId);
+          totals.notices += r.notices;
+          totals.messages += r.messages;
+          totals.failed += r.failed;
+        } catch (err) {
+          console.error(`[notices] agency ${agencyId} failed:`, err);
+        }
+      }
+      return totals;
     }
     if (job.name === "deliver-messages") {
       const totals = { sent: 0, failed: 0, retrying: 0 };

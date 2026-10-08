@@ -43,6 +43,44 @@ export interface TenantRecipient {
   tenantId: string;
 }
 
+/** Owners and staff get email only: no SMS cost for business and internal messages (D74). */
+export type Recipient = TenantRecipient | { kind: "owner"; ownerId: string } | { kind: "staff"; userId: string };
+
+interface ResolvedRecipient {
+  kind: Recipient["kind"];
+  id: string;
+  fullName: string;
+  channels: readonly SendChannel[];
+  address: (channel: SendChannel) => { to: string; reason: string | null };
+  optOutLink: string | null;
+}
+
+async function resolve(tx: Tx, recipient: Recipient, agency: Agency): Promise<ResolvedRecipient> {
+  const emailOnly = (email: string | null) => (channel: SendChannel) =>
+    channel === "email" ? (email ? { to: email, reason: null } : { to: "", reason: "No email address" }) : { to: "", reason: "Email only" };
+  if (recipient.kind === "owner") {
+    const [o] = await tx.select().from(schema.owners).where(eq(schema.owners.id, recipient.ownerId));
+    if (!o) throw new NotFoundError("Owner");
+    return { kind: "owner", id: o.id, fullName: o.name, channels: ["email"], address: emailOnly(o.email), optOutLink: null };
+  }
+  if (recipient.kind === "staff") {
+    const [u] = await tx.select().from(schema.users).where(eq(schema.users.id, recipient.userId));
+    if (!u) throw new NotFoundError("Staff member");
+    return { kind: "staff", id: u.id, fullName: u.name, channels: ["email"], address: emailOnly(u.active ? u.email : null), optOutLink: null };
+  }
+  const [tenant] = await tx.select().from(schema.tenants).where(eq(schema.tenants.id, recipient.tenantId));
+  if (!tenant) throw new NotFoundError("Tenant");
+  const code = await optOutCode(tx, tenant);
+  return {
+    kind: "tenant",
+    id: tenant.id,
+    fullName: tenant.fullName,
+    channels: LIVE_CHANNELS,
+    address: (channel) => address(channel, tenant),
+    optOutLink: `${agencyOrigin(agency.subdomain)}/o/${code}`,
+  };
+}
+
 type Message = typeof schema.messages.$inferSelect;
 type Agency = typeof schema.agencies.$inferSelect;
 
@@ -111,46 +149,56 @@ function address(channel: SendChannel, tenant: typeof schema.tenants.$inferSelec
 }
 
 /**
- * Queues a catalogue message to a tenant on each channel the message uses
- * (spec: send(recipient, template_key, variables)). Call inside the
- * transaction of the event it reports. Returns the batch id.
+ * Queues a catalogue message on each channel the message uses (spec:
+ * send(recipient, template_key, variables)): tenants by the channels they
+ * opted in to, owners and staff by email. Call inside the transaction of the
+ * event it reports. Returns the batch id.
+ *
+ * `copyOf` marks a staff copy of a tenant's message (e.g. overdue_7 goes to
+ * the tenant and their agent): the text is the tenant's, under a note.
  */
 export async function send(
   tx: Tx,
   input: {
-    recipient: TenantRecipient;
+    recipient: Recipient;
     templateKey: string;
     variables: Record<string, string>;
     leaseId?: string | null;
     attachmentDocumentId?: string | null;
+    copyOf?: string;
     now?: Date;
   },
 ): Promise<string> {
   const entry = catalogueEntry(input.templateKey);
   const agency = await ownAgency(tx);
-  const [tenant] = await tx.select().from(schema.tenants).where(eq(schema.tenants.id, input.recipient.tenantId));
-  if (!tenant) throw new NotFoundError("Tenant");
-  const code = await optOutCode(tx, tenant);
+  const to = await resolve(tx, input.recipient, agency);
   const vars: Record<string, string> = {
-    name: firstName(tenant.fullName),
+    name: firstName(to.fullName),
     agency: agency.name,
     ...input.variables,
-    opt_out_link: `${agencyOrigin(agency.subdomain)}/o/${code}`,
+    ...(to.optOutLink ? { opt_out_link: to.optOutLink } : {}),
   };
   const custom = await overrides(tx, entry.key);
   const batchId = randomUUID();
   const notBefore = outsideQuietHours(input.now ?? new Date(), agency.quietHoursStart, agency.quietHoursEnd);
-  for (const channel of entry.channels.filter((c): c is SendChannel => LIVE_CHANNELS.includes(c as SendChannel))) {
-    const { to, reason } = address(channel, tenant);
-    const { subject, body } = rendered(channel, entry, custom.get(channel), vars);
+  const wanted = entry.channels.filter((c): c is SendChannel => LIVE_CHANNELS.includes(c as SendChannel));
+  // Owners and staff get the email even when the message is SMS-only for tenants
+  const channels = to.kind === "tenant" ? wanted : to.channels;
+  for (const channel of channels) {
+    const { to: toAddress, reason } = to.address(channel);
+    let { subject, body } = rendered(channel, entry, custom.get(channel), vars);
+    if (input.copyOf) {
+      subject = `Copy: ${subject ?? ""}`;
+      body = [`This message was sent to ${input.copyOf}:`, "", body].join("\n");
+    }
     await tx.insert(schema.messages).values({
       batchId,
       templateKey: entry.key,
       channel,
-      recipientKind: "tenant",
-      recipientId: tenant.id,
-      recipientName: tenant.fullName,
-      toAddress: to,
+      recipientKind: to.kind,
+      recipientId: to.id,
+      recipientName: to.fullName,
+      toAddress,
       leaseId: input.leaseId ?? null,
       subject,
       body,

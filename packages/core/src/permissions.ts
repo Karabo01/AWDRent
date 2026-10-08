@@ -28,7 +28,8 @@ export type Action =
   | "payments.approve" // approve POPs / allocate bank lines
   | "deposits.manage" // record deposits received, interest, deductions, refunds
   | "pop.submit" // upload a proof of payment for a tenant (scoped)
-  | "messages.view"; // the notification log (scoped)
+  | "messages.view" // the notification log (scoped)
+  | "reminders.pause"; // pause a lease's overdue reminders (scoped)
 
 const MATRIX: Record<Action, readonly StaffRole[]> = {
   "settings.manage": ["admin"],
@@ -51,6 +52,7 @@ const MATRIX: Record<Action, readonly StaffRole[]> = {
   "deposits.manage": ["admin", "accounts"],
   "pop.submit": ["admin", "agent", "accounts"],
   "messages.view": ["admin", "agent", "accounts"],
+  "reminders.pause": ["admin", "agent", "accounts"],
 };
 
 export function can(role: StaffRole, action: Action): boolean {
