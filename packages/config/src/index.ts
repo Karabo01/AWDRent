@@ -48,6 +48,9 @@ const schema = z.object({
   DATABASE_OWNER_URL: z.url().optional(), // awdrent_owner: migrations and seed only
 
   REDIS_URL: z.url(),
+  // Login/OTP rate limits. "memory" is per-process and only for local runs
+  // without Redis; production refuses it.
+  RATE_LIMIT_STORAGE: z.enum(["redis", "memory"]).default("redis"),
 
   S3_ENDPOINT: z.url(),
   // Endpoint the browser uses for signed URLs; differs from S3_ENDPOINT inside docker
@@ -86,6 +89,9 @@ export function env(): Env {
   }
   if (!parsed.data.ENCRYPTION_KEYS.has(parsed.data.ENCRYPTION_ACTIVE_KEY_VERSION)) {
     throw new Error("Invalid environment:\n  ENCRYPTION_ACTIVE_KEY_VERSION: no key with that version");
+  }
+  if (parsed.data.NODE_ENV === "production" && parsed.data.RATE_LIMIT_STORAGE !== "redis") {
+    throw new Error("Invalid environment:\n  RATE_LIMIT_STORAGE: must be redis in production");
   }
   cached = parsed.data;
   return cached;

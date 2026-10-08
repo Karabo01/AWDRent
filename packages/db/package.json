@@ -10,11 +10,13 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "generate": "drizzle-kit generate",
-    "migrate": "tsx src/migrate.ts",
-    "seed": "tsx src/seed.ts"
+    "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
+    "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
+    "create-platform-admin": "tsx --env-file-if-exists=../../.env src/create-platform-admin.ts"
   },
   "dependencies": {
     "@awdrent/config": "*",
+    "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.4",
     "pg": "^8.16.0"
   },

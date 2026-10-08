@@ -1,4 +1,4 @@
-import { boolean, index, jsonb, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
 
@@ -79,6 +79,9 @@ export const platformTwoFactors = pgTable(
     // Encrypted by Better Auth with PLATFORM_AUTH_SECRET
     secret: text().notNull(),
     backupCodes: text().notNull(),
+    verified: boolean().notNull().default(true),
+    failedVerificationCount: integer().notNull().default(0),
+    lockedUntil: tstz(),
   },
   (t) => [uniqueIndex("platform_two_factors_user_key").on(t.userId)],
 );

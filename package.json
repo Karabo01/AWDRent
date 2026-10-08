@@ -21,13 +21,15 @@
     "test:e2e": "playwright test",
     "db:generate": "npm run generate -w @awdrent/db",
     "db:migrate": "npm run migrate -w @awdrent/db",
-    "db:seed": "npm run seed -w @awdrent/db"
+    "db:seed": "npm run seed -w @awdrent/db",
+    "platform:create-admin": "npm run create-platform-admin -w @awdrent/db --"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@playwright/test": "^1.64.0",
     "@types/node": "^22.18.0",
     "eslint": "^9.37.0",
+    "otpauth": "^9.5.2",
     "tsx": "^4.20.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.0",

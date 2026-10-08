@@ -63,6 +63,26 @@ export async function withAgency<T>(ctx: AgencyContext, fn: (tx: Tx) => Promise<
   );
 }
 
+export interface PublicAgency extends Record<string, unknown> {
+  id: string;
+  name: string;
+  subdomain: string;
+  logo_key: string | null;
+  brand_colour: string;
+  status: "active" | "suspended";
+}
+
+/**
+ * Branding for a host before anyone is logged in. Goes through a
+ * SECURITY DEFINER function that returns no bank or billing details.
+ */
+export async function publicAgencyBySubdomain(subdomain: string): Promise<PublicAgency | null> {
+  const { rows } = await dbFor("app").execute<PublicAgency>(
+    sql`select * from agency_public_by_subdomain(${subdomain})`,
+  );
+  return rows[0] ?? null;
+}
+
 /** Platform console: agencies, support sessions, platform audit. No agency data. */
 export async function withPlatform<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
   return dbFor("platform").transaction(fn);

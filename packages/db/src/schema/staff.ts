@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, foreignKey, index, pgEnum, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, foreignKey, integer, index, pgEnum, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { agencyColumn, pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
 
@@ -106,6 +106,9 @@ export const authTwoFactors = pgTable(
     // Encrypted by Better Auth with BETTER_AUTH_SECRET
     secret: text().notNull(),
     backupCodes: text().notNull(),
+    verified: boolean().notNull().default(true),
+    failedVerificationCount: integer().notNull().default(0),
+    lockedUntil: tstz(),
   },
   (t) => [uniqueIndex("auth_two_factors_user_key").on(t.userId)],
 );

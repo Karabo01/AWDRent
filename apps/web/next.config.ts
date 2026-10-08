@@ -1,4 +1,11 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
+
+// Local development keeps one .env at the repo root. In Docker/Coolify the
+// variables come from the environment and there is no file.
+const rootEnv = fileURLToPath(new URL("../../.env", import.meta.url));
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const config: NextConfig = {
   output: "standalone",

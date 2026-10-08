@@ -36,6 +36,20 @@
       "when": 1791461848567,
       "tag": "0004_audit_log_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791462350247,
+      "tag": "0005_two_factor_lockout",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791462353071,
+      "tag": "0006_platform_admin_bootstrap",
+      "breakpoints": true
     }
   ]
 }
