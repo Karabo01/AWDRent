@@ -1,6 +1,4 @@
 import "server-only";
-import { env } from "@awdrent/config";
-import { devOutbox } from "@awdrent/core/email";
 import { authDb, schema } from "@awdrent/db";
 import { and, eq } from "drizzle-orm";
 
@@ -20,11 +18,4 @@ export async function agencyAdmins(agencyId: string) {
     })
     .from(schema.users)
     .where(and(eq(schema.users.agencyId, agencyId), eq(schema.users.role, "admin")));
-}
-
-/** Local development without Resend: the newest emailed link for an address. */
-export function devEmailLink(email: string): string | null {
-  if (env().NODE_ENV === "production" || env().RESEND_API_KEY) return null;
-  const mail = [...devOutbox].reverse().find((m) => m.to === email);
-  return mail?.text.match(/https?:\/\/\S+/)?.[0] ?? null;
 }

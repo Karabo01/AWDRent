@@ -1,5 +1,6 @@
 import "server-only";
 import { parseHost } from "@awdrent/core/hosts";
+import { type Action, can } from "@awdrent/core/permissions";
 import { activeSupportSession, logSupportView, readSupportCookie, SUPPORT_COOKIE } from "@awdrent/core/support";
 import { publicAgencyBySubdomain, type AgencyContext, type PublicAgency } from "@awdrent/db";
 import { cookies, headers } from "next/headers";
@@ -49,10 +50,10 @@ export const requireStaff = cache(async (): Promise<StaffSession> => {
   return s.session;
 });
 
-/** Like requireStaff, but 404s for roles not listed. */
-export async function requireRole(...roles: StaffRole[]): Promise<StaffSession> {
+/** requireStaff plus a permission check (packages/core/src/permissions.ts); 404s if not allowed. */
+export async function requireCan(action: Action): Promise<StaffSession> {
   const s = await requireStaff();
-  if (!roles.includes(s.user.role)) notFound();
+  if (!can(s.user.role, action)) notFound();
   return s;
 }
 
