@@ -87,6 +87,12 @@ export const leases = pgTable(
     noticeGivenOn: date(),
     terminatedOn: date(),
     terminationReason: text(),
+    // Overdue reminders paused by staff, e.g. for a payment arrangement (spec; D73).
+    // Paused while reminders_paused_at is set and today is on or before the until date (if any).
+    remindersPausedAt: tstz(),
+    remindersPausedUntil: date(),
+    remindersPauseReason: text(),
+    remindersPausedBy: uuid(),
     notes: text(),
     ...timestamps,
     createdBy: createdBy(),

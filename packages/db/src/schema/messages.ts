@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { check, date, foreignKey, index, integer, jsonb, pgEnum, pgTable, primaryKey, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { agencyColumn, createdBy, pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
 import { documents } from "./documents";
@@ -81,6 +81,27 @@ export const messages = pgTable(
       foreignColumns: [documents.agencyId, documents.id],
     }),
     foreignKey({ name: "messages_fallback_fk", columns: [t.agencyId, t.fallbackOf], foreignColumns: [t.agencyId, t.id] }),
+  ],
+);
+
+/**
+ * Scheduled notices already sent (reminders, overdue, expiry, escalation),
+ * one row per lease and notice, so the daily run can repeat safely (D72).
+ * e.g. "rent_due_reminder:2026-11-01", "overdue_7:{charge id}".
+ */
+export const scheduledNotices = pgTable(
+  "scheduled_notices",
+  {
+    id: pk(),
+    agencyId: agencyColumn().references(() => agencies.id),
+    leaseId: uuid().notNull(),
+    noticeKey: text().notNull(),
+    sentOn: date().notNull(),
+    createdAt: tstz().notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("scheduled_notices_agency_lease_key").on(t.agencyId, t.leaseId, t.noticeKey),
+    foreignKey({ name: "scheduled_notices_lease_fk", columns: [t.agencyId, t.leaseId], foreignColumns: [leases.agencyId, leases.id] }),
   ],
 );
 
