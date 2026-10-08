@@ -127,7 +127,7 @@ describe("row-level security structure", () => {
         AND EXISTS (SELECT 1 FROM information_schema.columns c
                     WHERE c.table_schema = 'public' AND c.table_name = i.tablename AND c.column_name = 'agency_id')
         AND i.indexname NOT LIKE '%_pkey'
-        AND i.tablename NOT IN ('support_sessions', 'platform_audit_log', 'auth_sessions', 'provider_messages')`);
+        AND i.tablename NOT IN ('support_sessions', 'platform_audit_log', 'auth_sessions', 'portal_sessions', 'provider_messages')`);
     const bad = rows
       .filter((r) => !allowed.has(r.indexname))
       .filter((r) => !/\(agency_id[,)]/.test(r.indexdef))

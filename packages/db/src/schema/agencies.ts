@@ -21,6 +21,9 @@ export const agencies = pgTable(
     // Encrypted; see packages/core/src/crypto.ts
     trustAccountNoEnc: text(),
     trustAccountNoLast4: text(),
+    // Shown to tenants with the account number on the portal's payment page (D77)
+    trustAccountHolder: text(),
+    trustBranchCode: text(),
     // Prefix for EFT references: "KL" gives KL-0042
     eftPrefix: text().notNull(),
     smsSenderName: text(),

@@ -2,6 +2,7 @@ import { foreignKey, index, jsonb, pgTable, text, uuid } from "drizzle-orm/pg-co
 import { agencyColumn, pk, tstz } from "./_columns";
 import { agencies } from "./agencies";
 import { supportSessions } from "./platform";
+import { portalUsers } from "./portal";
 import { users } from "./staff";
 
 /**
@@ -16,6 +17,8 @@ export const auditLog = pgTable(
     agencyId: agencyColumn().references(() => agencies.id),
     userId: uuid(),
     supportSessionId: uuid().references(() => supportSessions.id),
+    // A tenant acting in the portal (D76)
+    portalUserId: uuid(),
     // e.g. "lease.created", "owner.bank_details_revealed"
     action: text().notNull(),
     entity: text().notNull(),
@@ -28,6 +31,7 @@ export const auditLog = pgTable(
   (t) => [
     index("audit_log_agency_entity_idx").on(t.agencyId, t.entity, t.entityId),
     index("audit_log_agency_created_idx").on(t.agencyId, t.createdAt),
+    foreignKey({ name: "audit_log_portal_user_fk", columns: [t.agencyId, t.portalUserId], foreignColumns: [portalUsers.agencyId, portalUsers.id] }),
     foreignKey({
       name: "audit_log_user_fk",
       columns: [t.agencyId, t.userId],

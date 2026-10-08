@@ -13,3 +13,4 @@ export * from "./banking";
 export * from "./pops";
 export * from "./receipts";
 export * from "./messages";
+export * from "./portal";

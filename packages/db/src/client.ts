@@ -42,6 +42,8 @@ export interface AgencyContext {
   userId?: string | null;
   /** Set when a platform admin acts under a support session. */
   supportSessionId?: string | null;
+  /** Tenant acting in the portal, from the verified portal session (D76). */
+  portalUserId?: string | null;
   /** Runs the transaction READ ONLY; Postgres rejects any write. */
   readOnly?: boolean;
 }
@@ -54,6 +56,7 @@ export async function withAgency<T>(ctx: AgencyContext, fn: (tx: Tx) => Promise<
   assertUuid(ctx.agencyId, "agencyId");
   if (ctx.userId) assertUuid(ctx.userId, "userId");
   if (ctx.supportSessionId) assertUuid(ctx.supportSessionId, "supportSessionId");
+  if (ctx.portalUserId) assertUuid(ctx.portalUserId, "portalUserId");
   return dbFor("app").transaction(
     async (tx) => {
       await setContext(tx, ctx);
@@ -113,7 +116,8 @@ async function setContext(tx: Tx, ctx: AgencyContext): Promise<void> {
   await tx.execute(sql`select
     set_config('app.agency_id', ${ctx.agencyId}, true),
     set_config('app.user_id', ${ctx.userId ?? ""}, true),
-    set_config('app.support_session_id', ${ctx.supportSessionId ?? ""}, true)`);
+    set_config('app.support_session_id', ${ctx.supportSessionId ?? ""}, true),
+    set_config('app.portal_user_id', ${ctx.portalUserId ?? ""}, true)`);
 }
 
 function assertUuid(value: string, name: string): void {
