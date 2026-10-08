@@ -1,0 +1,18 @@
+{
+  "name": "@awdrent/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@awdrent/config": "*",
+    "@awdrent/db": "*",
+    "zod": "^4.1.0"
+  }
+}

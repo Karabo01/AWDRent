@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Create CI .env
+        run: |
+          cp .env.example .env
+          key() { node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"; }
+          sed -i "s|^ENCRYPTION_KEYS=.*|ENCRYPTION_KEYS=1:$(key)|" .env
+          sed -i "s|^BLIND_INDEX_KEY=.*|BLIND_INDEX_KEY=$(key)|" .env
+          sed -i "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(key)|" .env
+          sed -i "s|^PLATFORM_AUTH_SECRET=.*|PLATFORM_AUTH_SECRET=$(key)|" .env
+
+      - name: Start backing services
+        run: docker compose up -d --wait postgres redis minio minio-init clamav
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+
+      # Unit, integration and cross-tenant isolation tests
+      - run: npm test
+
+      - name: Migrate and seed
+        run: npm run db:migrate && npm run db:seed
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Build and start web app
+        run: |
+          npm run build -w @awdrent/web
+          npm run start -w @awdrent/web > web.log 2>&1 &
+          npx wait-on -t 60000 http://localhost:3000/api/health
+
+      - run: npm run test:e2e
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            web.log

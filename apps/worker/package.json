@@ -1,0 +1,21 @@
+{
+  "name": "@awdrent/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@awdrent/config": "*",
+    "@awdrent/core": "*",
+    "@awdrent/db": "*",
+    "bullmq": "^5.61.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0"
+  }
+}
