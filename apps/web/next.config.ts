@@ -12,6 +12,10 @@ const config: NextConfig = {
   // Workspace packages ship TypeScript source
   transpilePackages: ["@awdrent/config", "@awdrent/core", "@awdrent/db"],
   poweredByHeader: false,
+  experimental: {
+    // Uploads are capped at 10 MB by the route; this leaves room for multipart overhead
+    proxyClientMaxBodySize: "12mb",
+  },
   async headers() {
     return [
       {

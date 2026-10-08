@@ -28,3 +28,15 @@ export const LEASE_EVENT_LABEL: Record<string, string> = {
   terminated: "Terminated",
   ended: "Ended",
 };
+
+export const DOCUMENT_KIND_LABEL: Record<string, string> = {
+  title_deed: "Title deed",
+  inspection_report: "Inspection report",
+  photo: "Photo",
+  id_document: "ID document",
+  lease_agreement: "Signed lease",
+  proof_of_address: "Proof of address",
+  payslip: "Payslip",
+  bank_statement: "Bank statement",
+  other: "Other",
+};

@@ -4,6 +4,7 @@ import { can } from "@awdrent/core/permissions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { DocumentsPanel } from "@/components/documents/documents-panel";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +20,16 @@ const when = new Intl.DateTimeFormat("en-ZA", { dateStyle: "medium", timeStyle: 
 /** Cents to the plain "7500.00" form fields expect. */
 const toRand = (cents: number) => (cents / 100).toFixed(2);
 
-export default async function LeasePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeasePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ upload?: string }>;
+}) {
   const s = await requireCan("records.view");
   const { id } = await params;
+  const { upload } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const { lease: l, unitLabel, propertyId, propertyName, tenants, events } = await load(() => getLease(actorOf(s), id));
   const canEdit = can(s.user.role, "records.edit");
@@ -182,6 +190,8 @@ export default async function LeasePage({ params }: { params: Promise<{ id: stri
           </CardContent>
         </Card>
       ) : null}
+
+      <DocumentsPanel session={s} subject={{ type: "lease", id: l.id }} returnTo={`/leases/${l.id}`} kinds={["lease_agreement", "inspection_report", "photo", "other"] as const} uploadResult={upload} />
 
       <Card>
         <CardHeader>

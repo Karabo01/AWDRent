@@ -43,3 +43,12 @@ binding until a later entry replaces it.
 | D19 | Overlapping leases | A unit cannot have two active/notice-given leases with overlapping dates (database exclusion constraint). Drafts may overlap, e.g. preparing the next tenant's lease during a notice period. |
 | D20 | Escalation | Applied by a staff action in Phase 1 (automatic from Phase 2): rent × (1 + %) rounded half-up to the cent with integer maths; the next escalation date moves on one year. |
 | D21 | Imported EFT references | Any bank-safe reference is accepted on import: uppercase letters, digits and dashes, 3–20 characters. Generated ones are always `PREFIX-NNNN`. |
+
+## 2026-10-08 — Documents (step 9)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D22 | What a document belongs to | One nullable column per subject (owner, property, unit, tenant, lease) with a check that exactly one is set, instead of the spec's polymorphic `owner_type`/`owner_id`. Each is a composite `(agency_id, id)` foreign key, so a document cannot be attached across agencies. Phase 3 adds maintenance requests and applications the same way. |
+| D23 | Upload pipeline | Type is detected from the file's bytes (PDF, JPEG, PNG only), 10 MB limit. Files land in `agencies/{id}/quarantine/`, are scanned by ClamAV in the worker (5 attempts, then marked "could not be checked"), and move to `agencies/{id}/files/` when clean. Infected files are deleted. A sweep every 5 minutes re-queues scans that were never queued (e.g. Redis was down). |
+| D24 | Downloads | Only clean files, through `/documents/{id}/download`, which checks access, writes an audit entry and redirects to a 5-minute signed link. Read-only support sessions cannot download (the audit entry is a write). Only admins delete documents. |
+| D25 | Object storage — **open** | Open-source MinIO is archived and no longer receives security updates (dl.min.io, 2026). The code uses plain S3 calls, so any S3-compatible store works. Needs a decision before go-live; see the Phase 1 summary. Local testing used SeaweedFS. |

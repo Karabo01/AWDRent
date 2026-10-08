@@ -277,3 +277,21 @@ describe("list summaries", () => {
     expect(leases.map((l) => l.primaryTenant)).toEqual(["Summary Main"]);
   });
 });
+
+describe("usage snapshot", () => {
+  it("counts units with live leases and lets the platform read it", async () => {
+    const { snapshotUsage } = await import("../src/usage");
+    const { withPlatform } = await import("@awdrent/db");
+    const c = await createAgencyWithAdmin("Usage");
+    const admin: Actor = { ctx: { agencyId: c.agency.id, userId: c.admin.id }, role: "admin", userId: c.admin.id };
+    const u1 = await newUnit(admin);
+    const u2 = await newUnit(admin, "Flat 2");
+    const t = await createTenant(admin, tenant("Usage Tenant"));
+    await activateLease(admin, (await createLease(admin, lease(u1.unitId, t))).id);
+    await createLease(admin, lease(u2.unitId, t)); // draft: not counted
+    expect(await snapshotUsage(c.agency.id)).toBe(1);
+    expect(await snapshotUsage(c.agency.id)).toBe(1); // idempotent per month
+    const rows = await withPlatform((tx) => tx.select().from(schema.usageCounters).where(eq(schema.usageCounters.agencyId, c.agency.id)));
+    expect(rows.map((r) => r.activeUnits)).toEqual([1]);
+  });
+});

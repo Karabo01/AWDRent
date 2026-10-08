@@ -4,6 +4,7 @@ import { getProperty, listAgents } from "@awdrent/core/properties";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { DocumentsPanel } from "@/components/documents/documents-panel";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,16 @@ import { AgentsForm, PropertyForm, UnitForm } from "../property-forms";
 
 export const metadata = { title: "Property" };
 
-export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PropertyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ upload?: string }>;
+}) {
   const s = await requireCan("records.view");
   const { id } = await params;
+  const { upload } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const actor = actorOf(s);
   const { property: p, ownerName, units, agents } = await load(() => getProperty(actor, id));
@@ -94,6 +102,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </CardContent>
         </Card>
       ) : null}
+
+      <DocumentsPanel session={s} subject={{ type: "property", id: p.id }} returnTo={`/properties/${p.id}`} kinds={["title_deed", "inspection_report", "photo", "other"] as const} uploadResult={upload} />
 
       {canEdit ? (
         <form action={setPropertyArchivedAction.bind(null, p.id, !p.archivedAt)}>

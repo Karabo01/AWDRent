@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { RevealValue } from "@/components/form/reveal";
+import { DocumentsPanel } from "@/components/documents/documents-panel";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,16 @@ import { OwnerBankForm, OwnerForm } from "../owner-forms";
 
 export const metadata = { title: "Owner" };
 
-export default async function OwnerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function OwnerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ upload?: string }>;
+}) {
   const s = await requireCan("records.view");
   const { id } = await params;
+  const { upload } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const actor = actorOf(s);
   const owner = await load(() => getOwner(actor, id));
@@ -142,6 +150,8 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
           )}
         </CardContent>
       </Card>
+
+      <DocumentsPanel session={s} subject={{ type: "owner", id: owner.id }} returnTo={`/owners/${owner.id}`} kinds={["id_document", "proof_of_address", "bank_statement", "other"] as const} uploadResult={upload} />
 
       {canEdit ? (
         <form action={setOwnerArchivedAction.bind(null, owner.id, !owner.archivedAt)}>

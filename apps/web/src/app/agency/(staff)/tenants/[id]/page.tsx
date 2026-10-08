@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { RevealValue } from "@/components/form/reveal";
+import { DocumentsPanel } from "@/components/documents/documents-panel";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,16 @@ export const metadata = { title: "Tenant" };
 
 const date = new Intl.DateTimeFormat("en-ZA", { dateStyle: "medium", timeZone: "Africa/Johannesburg" });
 
-export default async function TenantPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function TenantPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ upload?: string }>;
+}) {
   const s = await requireCan("records.view");
   const { id } = await params;
+  const { upload } = await searchParams;
   if (!z.uuid().safeParse(id).success) notFound();
   const t = await load(() => getTenant(actorOf(s), id));
   const canEdit = can(s.user.role, "records.edit");
@@ -83,6 +91,8 @@ export default async function TenantPage({ params }: { params: Promise<{ id: str
           )}
         </CardContent>
       </Card>
+
+      <DocumentsPanel session={s} subject={{ type: "tenant", id: t.id }} returnTo={`/tenants/${t.id}`} kinds={["id_document", "payslip", "bank_statement", "proof_of_address", "other"] as const} uploadResult={upload} />
 
       {canEdit ? (
         <Card>

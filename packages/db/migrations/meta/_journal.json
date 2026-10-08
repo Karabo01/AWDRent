@@ -92,6 +92,20 @@
       "when": 1791465101801,
       "tag": "0012_tenants_leases_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791465871091,
+      "tag": "0013_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1791465874159,
+      "tag": "0014_documents_rls",
+      "breakpoints": true
     }
   ]
 }
