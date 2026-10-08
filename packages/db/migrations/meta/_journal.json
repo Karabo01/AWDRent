@@ -50,6 +50,20 @@
       "when": 1791462353071,
       "tag": "0006_platform_admin_bootstrap",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791463327252,
+      "tag": "0007_support_handoff_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791463330535,
+      "tag": "0008_support_handoff_usage_rls",
+      "breakpoints": true
     }
   ]
 }

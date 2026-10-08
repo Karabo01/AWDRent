@@ -106,6 +106,10 @@ export const supportSessions = pgTable(
     startedAt: tstz().notNull().defaultNow(),
     expiresAt: tstz().notNull(),
     endedAt: tstz(),
+    // One-time hand-off from the console to the agency host (SHA-256 of the token)
+    entryTokenHash: text(),
+    entryTokenExpiresAt: tstz(),
+    entryTokenUsedAt: tstz(),
     ...timestamps,
   },
   (t) => [index("support_sessions_agency_idx").on(t.agencyId, t.startedAt)],

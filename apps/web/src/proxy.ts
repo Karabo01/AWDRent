@@ -23,7 +23,12 @@ export function proxy(request: NextRequest) {
   if (pathname.startsWith("/api/platform-auth/")) return host.kind === "platform" ? NextResponse.next() : notFound();
 
   const prefix = host.kind === "agency" ? "/agency" : "/platform";
-  return NextResponse.rewrite(new URL(`${prefix}${pathname === "/" ? "" : pathname}${search}`, request.url));
+  // The visible path, for audit entries. Always overwritten, never trusted from the client.
+  const forwarded = new Headers(request.headers);
+  forwarded.set("x-awd-path", pathname);
+  return NextResponse.rewrite(new URL(`${prefix}${pathname === "/" ? "" : pathname}${search}`, request.url), {
+    request: { headers: forwarded },
+  });
 }
 
 export const config = {

@@ -13,8 +13,12 @@ export interface SentEmail extends Email {
   sentAt: Date;
 }
 
-/** Emails "sent" without a Resend key, newest last. For local dev and tests. */
-export const devOutbox: SentEmail[] = [];
+/**
+ * Emails "sent" without a Resend key, newest last. For local dev and tests.
+ * Kept on globalThis so every bundle in the dev server shares one list.
+ */
+const store = globalThis as { __awdDevOutbox?: SentEmail[] };
+export const devOutbox: SentEmail[] = (store.__awdDevOutbox ??= []);
 
 export async function sendEmail(email: Email): Promise<void> {
   const e = env();
