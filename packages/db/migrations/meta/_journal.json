@@ -64,6 +64,20 @@
       "when": 1791463330535,
       "tag": "0008_support_handoff_usage_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791464448170,
+      "tag": "0009_owners_properties_units",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791464451508,
+      "tag": "0010_owners_properties_units_rls",
+      "breakpoints": true
     }
   ]
 }

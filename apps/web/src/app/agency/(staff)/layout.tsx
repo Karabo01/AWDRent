@@ -5,6 +5,8 @@ import { requireStaff, type StaffRole } from "@/server/session";
 
 const NAV: (NavItem & { needs?: Action })[] = [
   { href: "/", label: "Dashboard" },
+  { href: "/owners", label: "Owners", needs: "records.view" },
+  { href: "/properties", label: "Properties", needs: "records.view" },
   { href: "/staff", label: "Staff", needs: "staff.manage" },
   { href: "/settings", label: "Settings", needs: "settings.manage" },
   { href: "/audit", label: "Audit log", needs: "audit.view" },

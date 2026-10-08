@@ -1,0 +1,156 @@
+"use client";
+
+import { useActionState, useState, useTransition } from "react";
+import { Field, FormMessage } from "@/components/form/fields";
+import { SelectField } from "@/components/form/select-field";
+import { Button } from "@/components/ui/button";
+import type { FormState } from "@/server/forms";
+import { createOwnerAction, revealOwnerBankAction, updateOwnerAction, updateOwnerBankAction } from "./actions";
+
+export interface OwnerFormValues {
+  kind: string;
+  name: string;
+  idOrRegNoMasked: string | null;
+  email: string | null;
+  phone: string | null;
+  postalAddress: string | null;
+  commissionPercent: string;
+  vatRegistered: boolean;
+  vatNumber: string | null;
+  notes: string | null;
+}
+
+export function OwnerForm({ ownerId, values }: { ownerId?: string; values?: OwnerFormValues }) {
+  const action = ownerId ? updateOwnerAction.bind(null, ownerId) : createOwnerAction;
+  const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
+  return (
+    <form action={formAction} className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SelectField
+          name="kind"
+          label="Owner type"
+          defaultValue={values?.kind ?? "individual"}
+          state={state}
+          options={[
+            { value: "individual", label: "Individual" },
+            { value: "company", label: "Company" },
+            { value: "trust", label: "Trust" },
+          ]}
+        />
+        <Field name="name" label="Full name or registered name" defaultValue={values?.name} state={state} required />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SelectField
+          name="idKind"
+          label="Identity document"
+          defaultValue="sa_id"
+          state={state}
+          options={[
+            { value: "sa_id", label: "South African ID" },
+            { value: "other", label: "Passport or registration number" },
+          ]}
+          hint="Companies and trusts always use their registration number."
+        />
+        <Field
+          name="idOrRegNo"
+          label="ID / registration number"
+          state={state}
+          autoComplete="off"
+          hint={values?.idOrRegNoMasked ? `On file: ${values.idOrRegNoMasked}. Leave empty to keep it.` : "Stored encrypted."}
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field name="email" label="Email" type="email" defaultValue={values?.email} state={state} />
+        <Field name="phone" label="Phone" type="tel" defaultValue={values?.phone} state={state} />
+      </div>
+      <Field name="postalAddress" label="Postal address" defaultValue={values?.postalAddress} state={state} multiline />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field
+          name="commissionPercent"
+          label="Commission (%)"
+          inputMode="decimal"
+          defaultValue={values?.commissionPercent ?? "10"}
+          state={state}
+          required
+        />
+        <SelectField
+          name="vatRegistered"
+          label="VAT registered"
+          defaultValue={String(values?.vatRegistered ?? false)}
+          state={state}
+          options={[
+            { value: "false", label: "No" },
+            { value: "true", label: "Yes" },
+          ]}
+        />
+        <Field name="vatNumber" label="VAT number" defaultValue={values?.vatNumber} state={state} />
+      </div>
+      <Field name="notes" label="Notes" defaultValue={values?.notes} state={state} multiline />
+      <FormMessage state={state} />
+      <Button type="submit" disabled={pending} className="justify-self-start">
+        {ownerId ? "Save owner" : "Create owner"}
+      </Button>
+    </form>
+  );
+}
+
+export function OwnerBankForm({
+  ownerId,
+  values,
+}: {
+  ownerId: string;
+  values: { bankName: string | null; bankBranchCode: string | null; bankAccountHolder: string | null; accountMasked: string };
+}) {
+  const [state, action, pending] = useActionState(updateOwnerBankAction.bind(null, ownerId), {});
+  return (
+    <form action={action} className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field name="bankName" label="Bank" defaultValue={values.bankName} state={state} required />
+        <Field name="bankBranchCode" label="Branch code" inputMode="numeric" defaultValue={values.bankBranchCode} state={state} required />
+      </div>
+      <Field name="bankAccountHolder" label="Account holder" defaultValue={values.bankAccountHolder} state={state} required />
+      <Field
+        name="bankAccountNo"
+        label="Account number"
+        inputMode="numeric"
+        autoComplete="off"
+        hint={`On file: ${values.accountMasked}. Leave empty to keep it.`}
+        state={state}
+      />
+      <FormMessage state={state} />
+      <Button type="submit" disabled={pending} className="justify-self-start">
+        Save bank details
+      </Button>
+    </form>
+  );
+}
+
+export function RevealBankAccount({ ownerId, masked }: { ownerId: string; masked: string }) {
+  const [value, setValue] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className="font-mono" data-testid="bank-account">
+        {value ?? masked}
+      </span>
+      {value === null ? (
+        <button
+          type="button"
+          className="text-xs underline"
+          disabled={pending}
+          onClick={() =>
+            start(async () => {
+              const r = await revealOwnerBankAction(ownerId);
+              if (r.error) setError(r.error);
+              else setValue(r.value ?? "—");
+            })
+          }
+        >
+          Show (logged)
+        </button>
+      ) : null}
+      {error ? <span className="text-xs text-destructive">{error}</span> : null}
+    </span>
+  );
+}

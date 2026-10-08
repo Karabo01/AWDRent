@@ -25,3 +25,11 @@ binding until a later entry replaces it.
 |---|-------|----------|
 | D12 | Login tables | Better Auth's session, account, verification and two-factor tables have no `agency_id` (staff `auth_sessions` does carry one). They are readable only by the `awdrent_auth` role; the app role has no grants on them and RLS is on with no app policy. The platform admin TOTP secret lives in `platform_two_factors` (encrypted by Better Auth), not in a `platform_admins.totp_secret` column. |
 | D13 | Cross-agency references | Every foreign key between agency-scoped tables is composite on `(agency_id, id)`. Postgres checks foreign keys without RLS, so a plain `owner_id` reference could point at another agency's row. |
+
+## 2026-10-08 — Owners, properties and portfolios (step 7)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D14 | What agents see | Properties assigned to them; units of those properties; owners who have one of those properties or whom the agent created. A property an agent creates is put in their own portfolio automatically. Only admins assign portfolios. |
+| D15 | Deleting records | Owners, properties and units are archived, never deleted, so audit history and future ledgers stay intact. The app role has no DELETE on them. |
+| D16 | Owner identity numbers | SA ID numbers are validated (date and Luhn check digit). Passports and company/trust registration numbers are accepted as 5–20 letters, digits or slashes. Stored encrypted with a per-agency blind index for duplicate checks. |
