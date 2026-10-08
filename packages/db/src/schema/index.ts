@@ -12,3 +12,4 @@ export * from "./deposits";
 export * from "./banking";
 export * from "./pops";
 export * from "./receipts";
+export * from "./messages";

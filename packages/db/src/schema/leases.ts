@@ -40,6 +40,8 @@ export const tenants = pgTable(
     emailOptIn: boolean().notNull().default(true),
     smsOptIn: boolean().notNull().default(false),
     whatsappOptIn: boolean().notNull().default(false),
+    // Short code in opt-out links (D39, D68); set when first needed
+    optOutCode: text(),
     notes: text(),
     archivedAt: tstz(),
     ...timestamps,
@@ -49,6 +51,7 @@ export const tenants = pgTable(
     unique("tenants_agency_id_id_key").on(t.agencyId, t.id),
     index("tenants_agency_name_idx").on(t.agencyId, t.fullName),
     index("tenants_agency_id_index_idx").on(t.agencyId, t.idNumberBlindIndex),
+    uniqueIndex("tenants_agency_opt_out_code_key").on(t.agencyId, t.optOutCode),
   ],
 );
 

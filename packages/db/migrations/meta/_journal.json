@@ -190,6 +190,20 @@
       "when": 1791486860510,
       "tag": "0026_receipts_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791488981636,
+      "tag": "0027_messages",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1791489000990,
+      "tag": "0028_messages_rls",
+      "breakpoints": true
     }
   ]
 }

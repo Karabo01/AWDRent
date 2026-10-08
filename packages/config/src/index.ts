@@ -74,8 +74,16 @@ const schema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   PLATFORM_AUTH_SECRET: z.string().min(32),
 
+  // Without a key, messages go to the dev outbox (development and tests only)
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("AWDRent <no-reply@awdrent.co.za>"),
+  // Signing secret of the Resend webhook (whsec_...)
+  RESEND_WEBHOOK_SECRET: z.string().optional(),
+  // One AWDTECH Clickatell account (D38)
+  CLICKATELL_API_KEY: z.string().optional(),
+  // Basic-auth credentials set on the Clickatell delivery-report callback
+  CLICKATELL_CALLBACK_USER: z.string().optional(),
+  CLICKATELL_CALLBACK_PASSWORD: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
