@@ -23,6 +23,7 @@ function setKeys(keys: string, active: number) {
     CLAMAV_HOST: "localhost",
     BETTER_AUTH_SECRET: "x".repeat(32),
     PLATFORM_AUTH_SECRET: "y".repeat(32),
+    PORTAL_AUTH_SECRET: "z".repeat(32),
     BLIND_INDEX_KEY: k1,
     ENCRYPTION_KEYS: keys,
     ENCRYPTION_ACTIVE_KEY_VERSION: String(active),

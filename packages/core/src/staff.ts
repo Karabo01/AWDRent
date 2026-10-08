@@ -114,9 +114,10 @@ export async function updateStaff(ctx: AgencyContext, userId: string, input: Sta
 export async function listAudit(ctx: AgencyContext, opts: { limit: number; before?: Date }) {
   return withAgency(ctx, (tx) =>
     tx
-      .select({ entry: schema.auditLog, userName: schema.users.name })
+      .select({ entry: schema.auditLog, userName: schema.users.name, portalName: schema.portalUsers.name })
       .from(schema.auditLog)
       .leftJoin(schema.users, eq(schema.users.id, schema.auditLog.userId))
+      .leftJoin(schema.portalUsers, eq(schema.portalUsers.id, schema.auditLog.portalUserId))
       .where(opts.before ? sql`${schema.auditLog.createdAt} < ${opts.before}` : undefined)
       .orderBy(sql`${schema.auditLog.createdAt} desc`)
       .limit(opts.limit),

@@ -30,6 +30,14 @@ export const agencySettingsSchema = z.object({
     .string()
     .transform(normaliseIdentifier)
     .refine((s) => s === "" || /^\d{6,20}$/.test(s), "Digits only, 6 to 20 of them"),
+  // Shown to tenants on the portal's payment page (D77)
+  trustAccountHolder: optional(120),
+  trustBranchCode: z
+    .string()
+    .trim()
+    .default("")
+    .refine((s) => s === "" || /^\d{6}$/.test(s), "Six digits, e.g. 250655")
+    .transform((s) => s || null),
   quietHoursStart: time,
   quietHoursEnd: time,
   // Business details printed on receipts, statements and letters (D60)
@@ -60,6 +68,8 @@ export async function getAgencySettings(ctx: AgencyContext) {
       brandColour: a.brandColour,
       trustBankName: a.trustBankName,
       trustAccountNoLast4: a.trustAccountNoLast4,
+      trustAccountHolder: a.trustAccountHolder,
+      trustBranchCode: a.trustBranchCode,
       smsSenderName: a.smsSenderName,
       quietHoursStart: a.quietHoursStart.slice(0, 5),
       quietHoursEnd: a.quietHoursEnd.slice(0, 5),
@@ -83,6 +93,8 @@ export async function updateAgencySettings(ctx: AgencyContext, input: AgencySett
       name: input.name,
       brandColour: input.brandColour,
       trustBankName: input.trustBankName,
+      trustAccountHolder: input.trustAccountHolder,
+      trustBranchCode: input.trustBranchCode,
       quietHoursStart: input.quietHoursStart,
       quietHoursEnd: input.quietHoursEnd,
       legalName: input.legalName,
@@ -107,7 +119,7 @@ export async function updateAgencySettings(ctx: AgencyContext, input: AgencySett
   });
 }
 
-/** Full trust account number, e.g. for printing on reminders in Phase 2. */
+/** Full trust account number, for the tenant portal's payment page (D77). */
 export async function trustAccountNumber(ctx: AgencyContext): Promise<string | null> {
   return withAgency(ctx, async (tx) => {
     const [a] = await tx

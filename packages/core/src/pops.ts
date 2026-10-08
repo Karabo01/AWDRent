@@ -1,4 +1,4 @@
-import { schema, withAgency } from "@awdrent/db";
+import { schema, type Tx, withAgency } from "@awdrent/db";
 import { and, desc, eq, notInArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "./audit";
@@ -47,30 +47,42 @@ export async function submitPop(
   );
   return withAgency(actor.ctx, async (tx) => {
     await assertLeaseInScope(tx, actor, input.leaseId);
-    const [pop] = await tx
-      .insert(schema.proofsOfPayment)
-      .values({
-        leaseId: input.leaseId,
-        tenantId: input.tenantId ?? null,
-        documentId,
-        claimedCents: input.claim.amount,
-        claimedPaidOn: input.claim.paidOn,
-        referenceGiven: input.claim.reference,
-        submittedVia: input.via,
-      })
-      .returning();
-    await audit(tx, { action: "pop.submitted", entity: "lease", entityId: input.leaseId, after: { popId: pop!.id, ...input.claim, via: input.via } });
-    const tenantId = input.tenantId ?? (await primaryTenantId(tx, input.leaseId));
-    if (tenantId) {
-      await send(tx, {
-        recipient: { kind: "tenant", tenantId },
-        templateKey: "pop_received",
-        leaseId: input.leaseId,
-        variables: { amount: messageMoney(input.claim.amount) },
-      });
-    }
-    return { popId: pop!.id, documentId };
+    return { popId: await recordPop(tx, { ...input, documentId }), documentId };
   });
+}
+
+/**
+ * Records a POP whose file is already stored, audits it and confirms receipt
+ * to the tenant (pop_received). Shared by staff uploads and the portal (D78);
+ * the caller has checked access to the lease.
+ */
+export async function recordPop(
+  tx: Tx,
+  input: { leaseId: string; tenantId?: string | null; documentId: string; claim: PopClaim; via: "staff" | "portal" | "email" | "whatsapp" },
+): Promise<string> {
+  const [pop] = await tx
+    .insert(schema.proofsOfPayment)
+    .values({
+      leaseId: input.leaseId,
+      tenantId: input.tenantId ?? null,
+      documentId: input.documentId,
+      claimedCents: input.claim.amount,
+      claimedPaidOn: input.claim.paidOn,
+      referenceGiven: input.claim.reference,
+      submittedVia: input.via,
+    })
+    .returning();
+  await audit(tx, { action: "pop.submitted", entity: "lease", entityId: input.leaseId, after: { popId: pop!.id, ...input.claim, via: input.via } });
+  const tenantId = input.tenantId ?? (await primaryTenantId(tx, input.leaseId));
+  if (tenantId) {
+    await send(tx, {
+      recipient: { kind: "tenant", tenantId },
+      templateKey: "pop_received",
+      leaseId: input.leaseId,
+      variables: { amount: messageMoney(input.claim.amount) },
+    });
+  }
+  return pop!.id;
 }
 
 export async function listPops(actor: Actor, opts: { status?: "pending" | "approved" | "partial" | "rejected"; leaseId?: string } = {}) {

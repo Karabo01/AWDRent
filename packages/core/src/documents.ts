@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { schema, type Tx, withAgency } from "@awdrent/db";
+import { type AgencyContext, schema, type Tx, withAgency } from "@awdrent/db";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { audit } from "./audit";
@@ -98,17 +98,31 @@ export async function uploadDocument(
   permission: Action = "documents.upload",
 ): Promise<string> {
   authorise(actor, permission);
+  return storeUpload(actor.ctx, input, (tx) => assertSubjectInScope(tx, actor, input.subject));
+}
+
+/**
+ * Stores an upload in quarantine and records it as pending its virus scan.
+ * `check` asserts the uploader may attach to the subject; it runs before
+ * anything is stored and again in the recording transaction. Shared by staff
+ * uploads and the tenant portal (D78).
+ */
+export async function storeUpload(
+  ctx: AgencyContext,
+  input: { subject: Subject; kind: DocumentKind; filename: string; bytes: Uint8Array },
+  check: (tx: Tx) => Promise<void>,
+): Promise<string> {
   if (input.bytes.byteLength === 0) throw new UploadRejectedError("The file is empty.");
   if (input.bytes.byteLength > MAX_UPLOAD_BYTES) throw new UploadRejectedError("Files can be at most 10 MB.");
   const type = detectFileType(input.bytes);
   if (!type) throw new UploadRejectedError("Only PDF, JPG and PNG files can be uploaded.");
 
   // Check access before storing anything
-  await withAgency(actor.ctx, (tx) => assertSubjectInScope(tx, actor, input.subject));
-  const key = await putQuarantined(actor.ctx.agencyId, input.bytes, type.contentType, type.extension);
+  await withAgency(ctx, check);
+  const key = await putQuarantined(ctx.agencyId, input.bytes, type.contentType, type.extension);
   try {
-    return await withAgency(actor.ctx, async (tx) => {
-      await assertSubjectInScope(tx, actor, input.subject);
+    return await withAgency(ctx, async (tx) => {
+      await check(tx);
       const [doc] = await tx
         .insert(schema.documents)
         .values({

@@ -257,7 +257,7 @@ async function fallbackToEmail(tx: Tx, failed: Message): Promise<string | null> 
   return row!.id;
 }
 
-function emailBrand(agency: Agency): EmailBrand {
+export function emailBrand(agency: Agency): EmailBrand {
   const lines = [
     agency.legalName ?? agency.name,
     [agency.registrationNo ? `Reg. no. ${agency.registrationNo}` : null, agency.ffcNumber ? `FFC ${agency.ffcNumber}` : null, agency.vatNumber ? `VAT no. ${agency.vatNumber}` : null]
@@ -298,7 +298,7 @@ async function claimDue(agencyId: string, limit: number): Promise<Message[]> {
   });
 }
 
-async function countUsage(tx: Tx, channel: string): Promise<void> {
+export async function countUsage(tx: Tx, channel: string): Promise<void> {
   const month = sql`date_trunc('month', now() at time zone 'Africa/Johannesburg')::date`;
   const column = channel === "sms" ? "smsSent" : channel === "whatsapp" ? "whatsappSent" : "emailsSent";
   await tx

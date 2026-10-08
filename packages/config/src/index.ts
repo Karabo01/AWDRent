@@ -73,6 +73,8 @@ const schema = z.object({
 
   BETTER_AUTH_SECRET: z.string().min(32),
   PLATFORM_AUTH_SECRET: z.string().min(32),
+  // Tenant portal sessions and one-time code hashes (D76)
+  PORTAL_AUTH_SECRET: z.string().min(32),
 
   // Without a key, messages go to the dev outbox (development and tests only)
   RESEND_API_KEY: z.string().optional(),
@@ -84,6 +86,10 @@ const schema = z.object({
   // Basic-auth credentials set on the Clickatell delivery-report callback
   CLICKATELL_CALLBACK_USER: z.string().optional(),
   CLICKATELL_CALLBACK_PASSWORD: z.string().optional(),
+  // Tests only: absolute path of a JSON-lines file that receives messages
+  // sent without provider keys (sign-in codes for the end-to-end tests).
+  // Refused in production unless APP_BASE_DOMAIN is localhost.
+  DEV_OUTBOX_FILE: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -100,6 +106,9 @@ export function env(): Env {
   }
   if (!parsed.data.ENCRYPTION_KEYS.has(parsed.data.ENCRYPTION_ACTIVE_KEY_VERSION)) {
     throw new Error("Invalid environment:\n  ENCRYPTION_ACTIVE_KEY_VERSION: no key with that version");
+  }
+  if (parsed.data.DEV_OUTBOX_FILE && parsed.data.NODE_ENV === "production" && parsed.data.APP_BASE_DOMAIN !== "localhost") {
+    throw new Error("Invalid environment:\n  DEV_OUTBOX_FILE: only for test runs on localhost");
   }
   if (parsed.data.NODE_ENV === "production" && parsed.data.RATE_LIMIT_STORAGE !== "redis") {
     throw new Error("Invalid environment:\n  RATE_LIMIT_STORAGE: must be redis in production");

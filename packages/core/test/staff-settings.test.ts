@@ -54,7 +54,7 @@ describe("staff management", () => {
   });
 });
 
-const noDetails = { legalName: null, registrationNo: null, ffcNumber: null, vatNumber: null, physicalAddress: null, contactPhone: null, contactEmail: null };
+const noDetails = { trustAccountHolder: null, trustBranchCode: null, legalName: null, registrationNo: null, ffcNumber: null, vatNumber: null, physicalAddress: null, contactPhone: null, contactEmail: null };
 
 describe("agency settings", () => {
   it("encrypts the trust account number and keeps it out of the audit log", async () => {

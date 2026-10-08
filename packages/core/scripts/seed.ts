@@ -118,6 +118,8 @@ async function seedAgency(spec: (typeof DEMO.agencies)[number], index: number) {
     brandColour: spec.brandColour,
     trustBankName: index === 0 ? "FNB" : "Standard Bank",
     trustAccountNo: index === 0 ? "62000000001" : "10000000002",
+    trustAccountHolder: `${spec.name} Trust Account`,
+    trustBranchCode: index === 0 ? "250655" : "051001",
     quietHoursStart: "20:00",
     quietHoursEnd: "07:00",
     legalName: `${spec.name} (Pty) Ltd`,

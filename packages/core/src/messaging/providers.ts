@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs";
 import { env } from "@awdrent/config";
 
 // Channel providers behind one interface (spec: pluggable channels, so
@@ -58,8 +59,10 @@ const store = globalThis as { __awdDevMessages?: DevMessage[] };
 export const devMessages: DevMessage[] = (store.__awdDevMessages ??= []);
 
 function toDevOutbox(message: Omit<DevMessage, "sentAt">, id: string): Sent {
-  if (env().NODE_ENV === "production") throw new Error(`${message.channel} is not configured (no API key)`);
+  const file = env().DEV_OUTBOX_FILE;
+  if (env().NODE_ENV === "production" && !file) throw new Error(`${message.channel} is not configured (no API key)`);
   devMessages.push({ ...message, sentAt: new Date() });
+  if (file) appendFileSync(file, `${JSON.stringify({ ...message, sentAt: new Date().toISOString() })}\n`);
   if (devMessages.length > 200) devMessages.shift();
   if (env().NODE_ENV !== "test") console.info(`[${message.channel}:dev] to=${message.to}${message.subject ? ` subject="${message.subject}"` : ""}\n${message.text}`);
   return { provider: "dev", providerId: id };

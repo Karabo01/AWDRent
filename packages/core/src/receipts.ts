@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { schema, withAgency } from "@awdrent/db";
+import { type AgencyContext, schema, withAgency } from "@awdrent/db";
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { audit } from "./audit";
 import { logoFile } from "./branding";
@@ -251,10 +251,18 @@ export async function listReceipts(actor: Actor, leaseId: string) {
 
 /** A lease statement as a branded PDF, generated on request (spec). Audited. */
 export async function statementPdf(actor: Actor, leaseId: string): Promise<{ bytes: Uint8Array; filename: string }> {
-  const ledger = await getLedger(actor, leaseId);
-  const particulars = await leaseParticulars(actor.ctx.agencyId, leaseId);
+  return renderStatementPdf(actor.ctx, leaseId, await getLedger(actor, leaseId));
+}
+
+/** The statement PDF for a lease the caller may see (staff above, the portal), audited. */
+export async function renderStatementPdf(
+  ctx: AgencyContext,
+  leaseId: string,
+  ledger: Awaited<ReturnType<typeof getLedger>>,
+): Promise<{ bytes: Uint8Array; filename: string }> {
+  const particulars = await leaseParticulars(ctx.agencyId, leaseId);
   const today = todayInSouthAfrica();
-  const pdf = await renderStatement(await loadBrand(actor.ctx.agencyId), {
+  const pdf = await renderStatement(await loadBrand(ctx.agencyId), {
     issuedOn: pdfDate(today),
     tenantNames: particulars.tenantNames,
     dwelling: particulars.dwelling,
@@ -270,7 +278,7 @@ export async function statementPdf(actor: Actor, leaseId: string): Promise<{ byt
     balance: pdfMoney(ledger.balanceCents),
     overdue: pdfMoney(ledger.overdueCents),
   });
-  await withAgency(actor.ctx, (tx) => audit(tx, { action: "statement.generated", entity: "lease", entityId: leaseId }));
+  await withAgency(ctx, (tx) => audit(tx, { action: "statement.generated", entity: "lease", entityId: leaseId }));
   return { bytes: new Uint8Array(pdf), filename: `Statement ${particulars.lease.eftReference} ${today}.pdf` };
 }
 

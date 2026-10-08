@@ -147,9 +147,14 @@ export async function getLedger(actor: Actor, leaseId: string, today = todayInSo
   authorise(actor, "ledger.view");
   return withAgency({ ...actor.ctx, readOnly: true }, async (tx) => {
     await assertLeaseInScope(tx, actor, leaseId);
-    const { charges, payments } = await loadLedger(tx, leaseId);
-    return { lines: statement(charges, payments), ...summarise(charges, payments, today) };
+    return ledgerInTx(tx, leaseId, today);
   });
+}
+
+/** A lease's statement and balances, for a caller that has checked access (staff above, the portal). */
+export async function ledgerInTx(tx: Tx, leaseId: string, today = todayInSouthAfrica()) {
+  const { charges, payments } = await loadLedger(tx, leaseId);
+  return { lines: statement(charges, payments), ...summarise(charges, payments, today) };
 }
 
 /** Balance for each of the given leases (lists), in cents. */
