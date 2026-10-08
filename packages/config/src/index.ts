@@ -51,6 +51,9 @@ const schema = z.object({
   // Login/OTP rate limits. "memory" is per-process and only for local runs
   // without Redis; production refuses it.
   RATE_LIMIT_STORAGE: z.enum(["redis", "memory"]).default("redis"),
+  // Sign-in and code attempts allowed per IP per 5 minutes. Keep 5 in
+  // production; the end-to-end test run raises it.
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(1000).default(5),
 
   S3_ENDPOINT: z.url(),
   // Endpoint the browser uses for signed URLs; differs from S3_ENDPOINT inside docker

@@ -68,9 +68,9 @@ function buildPlatformAuth() {
       window: 60,
       max: 60,
       customRules: {
-        "/sign-in/email": { window: 300, max: 5 },
-        "/two-factor/verify-totp": { window: 300, max: 5 },
-        "/two-factor/verify-backup-code": { window: 300, max: 5 },
+        "/sign-in/email": { window: 300, max: e.AUTH_RATE_LIMIT_MAX },
+        "/two-factor/verify-totp": { window: 300, max: e.AUTH_RATE_LIMIT_MAX },
+        "/two-factor/verify-backup-code": { window: 300, max: e.AUTH_RATE_LIMIT_MAX },
       },
       ...(e.RATE_LIMIT_STORAGE === "redis" ? { customStorage: redisRateLimitStorage } : { storage: "memory" as const }),
     },

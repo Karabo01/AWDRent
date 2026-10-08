@@ -15,18 +15,18 @@ import {
 // (secret encrypted with the auth secret). Never used in production paths.
 //
 // To generate codes for a seeded user, the TOTP key is the UTF-8 bytes of
-// `totpSecret` (otpauth: new OTPAuth.Secret({ buffer: Buffer.from(totpSecret) })).
+// `totp` (otpauth: new OTPAuth.Secret({ buffer: Buffer.from(totp) })).
 
 interface LoginSpec {
   name: string;
   email: string;
   password: string;
-  totpSecret: string;
+  totp: string;
 }
 
-async function twoFactorRow(secretKey: string, totpSecret: string) {
+async function twoFactorRow(secretKey: string, totp: string) {
   return {
-    secret: await symmetricEncrypt({ key: secretKey, data: totpSecret }),
+    secret: await symmetricEncrypt({ key: secretKey, data: totp }),
     backupCodes: await symmetricEncrypt({ key: secretKey, data: JSON.stringify([]) }),
     verified: true,
   };
@@ -53,9 +53,21 @@ export async function createStaffLogin(
   });
   await authDb()
     .insert(authTwoFactors)
-    .values({ userId: user.id, ...(await twoFactorRow(secret, spec.totpSecret)) });
+    .values({ userId: user.id, ...(await twoFactorRow(secret, spec.totp)) });
   await authDb().update(users).set({ twoFactorEnabled: true }).where(eq(users.id, user.id));
   return user.id;
+}
+
+/**
+ * Creates the platform login unless a complete one exists. A half-created
+ * one (an earlier run failed between steps, which use different database
+ * roles and so cannot share a transaction) is removed and created again.
+ */
+export async function ensurePlatformLogin(spec: LoginSpec): Promise<string> {
+  const [existing] = await ownerDb().select().from(platformAdmins).where(eq(platformAdmins.email, spec.email));
+  if (existing?.twoFactorEnabled) return existing.id;
+  if (existing) await ownerDb().delete(platformAdmins).where(eq(platformAdmins.id, existing.id));
+  return createPlatformLogin(spec);
 }
 
 export async function createPlatformLogin(spec: LoginSpec): Promise<string> {
@@ -74,7 +86,7 @@ export async function createPlatformLogin(spec: LoginSpec): Promise<string> {
   });
   await authDb()
     .insert(platformTwoFactors)
-    .values({ userId: admin.id, ...(await twoFactorRow(secret, spec.totpSecret)) });
+    .values({ userId: admin.id, ...(await twoFactorRow(secret, spec.totp)) });
   await authDb().update(platformAdmins).set({ twoFactorEnabled: true }).where(eq(platformAdmins.id, admin.id));
   return admin.id;
 }

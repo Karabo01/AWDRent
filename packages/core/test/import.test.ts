@@ -16,10 +16,12 @@ let b: Awaited<ReturnType<typeof createAgencyWithAdmin>>;
 let adminA: Actor;
 let adminB: Actor;
 
+const BOM = String.fromCharCode(0xfeff);
+
 // An agency's spreadsheet as Excel in South Africa saves it: semicolons,
 // day-first dates, decimal commas, a byte-order mark.
 const files = (suffix: string, extra: Partial<ImportFiles> = {}): ImportFiles => ({
-  owners: `﻿owner_ref;name;kind;id_or_reg_no;email;commission_percent;vat_registered;vat_number;bank_name;bank_branch_code;bank_account_holder;bank_account_no
+  owners: `${BOM}owner_ref;name;kind;id_or_reg_no;email;commission_percent;vat_registered;vat_number;bank_name;bank_branch_code;bank_account_holder;bank_account_no
 O1;Thabo Mokoena ${suffix};individual;8001015009087;thabo@example.test;10;no;;FNB;250655;T Mokoena;62001234567
 O2;Kaya Holdings ${suffix};company;2015/123456/07;;8,5;yes;4123456789;;;;`,
   properties: `property_ref,owner_ref,name,type,address_line1,suburb,city
@@ -50,7 +52,7 @@ afterAll(() => closeDb());
 
 describe("parsing", () => {
   it("handles semicolons, BOMs and South African dates", () => {
-    expect(parseCsv("﻿a;b\n1;2\n")).toEqual([{ a: "1", b: "2" }]);
+    expect(parseCsv(`${BOM}a;b\n1;2\n`)).toEqual([{ a: "1", b: "2" }]);
     expect(parseCsv("Owner Ref,Name\nO1,\"Smith, J\"\n")).toEqual([{ owner_ref: "O1", name: "Smith, J" }]);
     expect(normaliseDate("01/11/2025")).toBe("2025-11-01");
     expect(normaliseDate("1/2/2026")).toBe("2026-02-01");

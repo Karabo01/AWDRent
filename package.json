@@ -21,7 +21,7 @@
     "test:e2e": "playwright test",
     "db:generate": "npm run generate -w @awdrent/db",
     "db:migrate": "npm run migrate -w @awdrent/db",
-    "db:seed": "npm run seed -w @awdrent/db",
+    "db:seed": "npm run seed -w @awdrent/core",
     "platform:create-admin": "npm run create-platform-admin -w @awdrent/db --"
   },
   "devDependencies": {

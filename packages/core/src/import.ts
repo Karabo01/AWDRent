@@ -107,7 +107,7 @@ type Row = Record<string, string>;
 
 /** Excel in South Africa often saves CSV with semicolons; detect from the header. */
 export function parseCsv(text: string): Row[] {
-  const clean = text.replace(/^﻿/, "");
+  const clean = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   const header = clean.split(/\r?\n/, 1)[0] ?? "";
   const delimiter = (header.match(/;/g)?.length ?? 0) > (header.match(/,/g)?.length ?? 0) ? ";" : ",";
   return parse(clean, {

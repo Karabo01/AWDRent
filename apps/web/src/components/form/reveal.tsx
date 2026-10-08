@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 /**
  * Shows a masked value with a "Show (logged)" button that calls a server
@@ -19,6 +19,9 @@ export function RevealValue({
   const [value, setValue] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Disabled until hydrated, so an early click is not silently lost
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   return (
     <span className="inline-flex items-center gap-2">
       <span className="font-mono" data-testid={testId}>
@@ -28,7 +31,7 @@ export function RevealValue({
         <button
           type="button"
           className="text-xs underline"
-          disabled={pending}
+          disabled={!ready || pending}
           onClick={() =>
             start(async () => {
               const r = await reveal();

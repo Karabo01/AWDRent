@@ -10,6 +10,8 @@ x-app-env: &app-env
   DATABASE_AUTH_URL: postgres://awdrent_auth:${DB_AUTH_PASSWORD}@postgres:5432/${POSTGRES_DB:-awdrent}
   DATABASE_PLATFORM_URL: postgres://awdrent_platform:${DB_PLATFORM_PASSWORD}@postgres:5432/${POSTGRES_DB:-awdrent}
   REDIS_URL: redis://redis:6379
+  RATE_LIMIT_STORAGE: redis
+  AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-5}
   S3_ENDPOINT: http://minio:9000
   S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}
   S3_REGION: ${S3_REGION:-af-south-1}
@@ -126,7 +128,7 @@ services:
       - -c
       - >-
         node --import tsx packages/db/src/migrate.ts &&
-        if [ "$$SEED_DEMO" = "true" ]; then node --import tsx packages/db/src/seed.ts; fi
+        if [ "$SEED_DEMO" = "true" ]; then node --import tsx packages/core/scripts/seed.ts; fi
     environment:
       <<: *app-env
       DATABASE_OWNER_URL: postgres://awdrent_owner:${DB_OWNER_PASSWORD}@postgres:5432/${POSTGRES_DB:-awdrent}

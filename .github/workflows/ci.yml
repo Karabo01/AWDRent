@@ -25,29 +25,32 @@ jobs:
           sed -i "s|^BLIND_INDEX_KEY=.*|BLIND_INDEX_KEY=$(key)|" .env
           sed -i "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(key)|" .env
           sed -i "s|^PLATFORM_AUTH_SECRET=.*|PLATFORM_AUTH_SECRET=$(key)|" .env
+          # The end-to-end run signs in more often than the production limit allows
+          sed -i "s|^AUTH_RATE_LIMIT_MAX=.*|AUTH_RATE_LIMIT_MAX=100|" .env
 
       - name: Start backing services
-        run: docker compose up -d --wait postgres redis minio minio-init clamav
+        run: docker compose up -d --wait postgres redis minio minio-init
 
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
 
-      # Unit, integration and cross-tenant isolation tests
+      # Unit, integration and cross-tenant isolation tests (own test database)
       - run: npm test
 
-      - name: Migrate and seed
+      - name: Migrate and seed the demo agencies
         run: npm run db:migrate && npm run db:seed
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Build and start web app
+      - name: Build and start the web app
         run: |
           npm run build -w @awdrent/web
           npm run start -w @awdrent/web > web.log 2>&1 &
-          npx wait-on -t 60000 http://localhost:3000/api/health
+          for i in $(seq 1 60); do curl -sf http://localhost:3000/api/health && break; sleep 1; done
 
+      # One test per main screen, plus cross-agency attempts through the browser
       - run: npm run test:e2e
 
       - if: failure()
@@ -56,4 +59,5 @@ jobs:
           name: playwright-report
           path: |
             playwright-report
+            test-results
             web.log

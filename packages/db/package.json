@@ -5,13 +5,13 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    "./schema": "./src/schema/index.ts",
+    "./dev-logins": "./src/dev-logins.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "generate": "drizzle-kit generate",
     "migrate": "tsx --env-file-if-exists=../../.env src/migrate.ts",
-    "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
     "create-platform-admin": "tsx --env-file-if-exists=../../.env src/create-platform-admin.ts"
   },
   "dependencies": {

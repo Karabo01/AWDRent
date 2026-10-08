@@ -119,9 +119,9 @@ function buildStaffAuth() {
       window: 60,
       max: 60,
       customRules: {
-        "/sign-in/email": { window: 300, max: 5 },
-        "/two-factor/verify-totp": { window: 300, max: 5 },
-        "/two-factor/verify-backup-code": { window: 300, max: 5 },
+        "/sign-in/email": { window: 300, max: e.AUTH_RATE_LIMIT_MAX },
+        "/two-factor/verify-totp": { window: 300, max: e.AUTH_RATE_LIMIT_MAX },
+        "/two-factor/verify-backup-code": { window: 300, max: e.AUTH_RATE_LIMIT_MAX },
         "/request-password-reset": { window: 3600, max: 3 },
         "/reset-password": { window: 3600, max: 5 },
       },

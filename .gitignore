@@ -11,3 +11,4 @@ playwright-report/
 test-results/
 .turbo/
 .DS_Store
+e2e/.auth/
