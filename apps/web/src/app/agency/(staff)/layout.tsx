@@ -12,6 +12,7 @@ const NAV: (NavItem & { needs?: Action })[] = [
   { href: "/leases", label: "Leases", needs: "records.view" },
   { href: "/payments", label: "Proofs of payment", needs: "payments.approve" },
   { href: "/banking", label: "Banking", needs: "payments.approve" },
+  { href: "/messages", label: "Messages", needs: "messages.view" },
   { href: "/import", label: "Import", needs: "import.run" },
   { href: "/staff", label: "Staff", needs: "staff.manage" },
   { href: "/settings", label: "Settings", needs: "settings.manage" },

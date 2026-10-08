@@ -1,5 +1,6 @@
 import { getAgencySettings } from "@awdrent/core/agency-settings";
 import { mask } from "@awdrent/core/crypto";
+import Link from "next/link";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireCan } from "@/server/session";
@@ -83,6 +84,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 contactEmail: s.contactEmail,
               }}
             />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Message wording</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 text-sm">
+            <p className="text-muted-foreground">Reminders, payment confirmations and other messages tenants receive by email and SMS.</p>
+            <Link href="/settings/messages" className="underline">
+              Edit message wording
+            </Link>
           </CardContent>
         </Card>
         <p className="text-sm text-muted-foreground">

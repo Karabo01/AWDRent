@@ -21,9 +21,14 @@ export async function AccountCard({ session, leaseId, isDraft }: { session: Staf
         <CardTitle className="flex items-center justify-between">
           Account
           {!isDraft ? (
-            <a href={`/leases/${leaseId}/statement`} className="text-sm font-normal underline" data-testid="statement-pdf">
-              Statement (PDF)
-            </a>
+            <span className="flex gap-4 text-sm font-normal">
+              <a href={`/messages?lease=${leaseId}`} className="underline">
+                Messages
+              </a>
+              <a href={`/leases/${leaseId}/statement`} className="underline" data-testid="statement-pdf">
+                Statement (PDF)
+              </a>
+            </span>
           ) : null}
         </CardTitle>
       </CardHeader>
