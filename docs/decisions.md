@@ -72,3 +72,25 @@ binding until a later entry replaces it.
 | D32 | POP inbox | IMAP polling of a dedicated mailbox. |
 | D33 | Approving a POP | Approving a proof of payment means linking it to a matching trust-account bank line; that link is what creates the approved payment. A POP on its own never changes the balance (spec). |
 | D34 | Payment allocation | A payment pays off the oldest unpaid charge first (by due date, then created time); any excess is a credit carried forward. |
+
+## 2026-10-08 — Phase 2 plan approved
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D35 | Part months | A full month's rent is charged for every month a lease is live, including the first and last month. No pro-rata. |
+| D36 | Bank statement import | A general CSV import; each agency saves which columns hold the date, amount, reference and description, and the date format. Bank-specific formats can be added once D29 is settled. |
+| D37 | POP mailbox | One AWDRent mailbox read over IMAP. Each agency gets its own address on it, `pop+{subdomain}@awdrent.co.za`; agencies forward their own `pop@` address there. |
+| D38 | Clickatell account | One AWDTECH account. Each agency's sender ID is registered under it; SMS cost is recharged through the per-agency usage counts. |
+| D39 | SMS opt-out | An opt-out link in the SMS and in the tenant portal. No "reply STOP" for now (needs a two-way number). |
+| D40 | Deposit interest | Recorded as the bank actually pays it, entered from the investment account statement, rather than calculated from a rate. (Proposed in the Phase 2 plan; not objected to.) |
+| D41 | Tenant and owner logins | A third Better Auth instance with its own tables: one-time codes by email or SMS (10-minute expiry, 5 attempts), rate limited, valid only on the agency's own host, no passwords. (Proposed in the Phase 2 plan; not objected to.) |
+
+## 2026-10-08 — Rent ledger (Phase 2, step 1)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D42 | Charges are never edited | A charge cannot be changed or deleted. A mistake is voided with a reason (audited) and, if needed, a corrected charge is added. Voided charges stay visible on the statement. |
+| D43 | Allocation is computed | Payments are not stored against charges. Which charges are paid is worked out oldest-first each time (D34), so voiding a charge or adding a payment can never leave stale allocations. The balance is always charges minus approved payments (spec). |
+| D44 | When billing starts | Each lease has a "bill rent from" month, defaulting to its start month and editable while it is a draft. Rent is raised for every month from then until the lease ends, up to the current month, on the 1st of the month (due on the lease's due day, D18). Activating a lease raises any months already started. |
+| D45 | Imported leases | Imported leases start billing in the month after the import unless the file says otherwise (`billing_starts`), so months already settled in the old system are not charged again. An `opening_balance` column brings over arrears (a charge) or credit (a payment marked "opening balance", the only payment not tied to a bank line). **To confirm with the agency during migration.** |
+| D46 | Escalations | Applied automatically by the daily job on the escalation date, before that day's rent is raised (completes D20). |

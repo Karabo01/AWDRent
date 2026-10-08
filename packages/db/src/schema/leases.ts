@@ -69,6 +69,8 @@ export const leases = pgTable(
     eftReference: text().notNull(),
     status: leaseStatus().notNull().default("draft"),
     startDate: date().notNull(),
+    // First month rent is raised for (D44); defaults to the start month
+    billingStartsOn: date(),
     // Null = month-to-month after the start date
     endDate: date(),
     rentCents: integer().notNull(),

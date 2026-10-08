@@ -3,6 +3,7 @@ import { closeDb, schema, withPlatform } from "@awdrent/db";
 import { createStaffLogin, ensurePlatformLogin } from "@awdrent/db/dev-logins";
 import { eq } from "drizzle-orm";
 import { updateAgencySettings } from "../src/agency-settings";
+import { monthStart, todayInSouthAfrica } from "../src/billing";
 import { activateLease, createLease, giveNotice } from "../src/leases";
 import { createOwner, updateOwnerBank } from "../src/owners";
 import type { Actor } from "../src/portfolio";
@@ -80,6 +81,8 @@ const lease = (unitId: string, primaryTenantId: string, rent: number, start: str
   primaryTenantId,
   coTenantIds,
   startDate: start,
+  // Demo leases started earlier; bill only from this month so balances look realistic
+  billingStartsOn: monthStart(todayInSouthAfrica()),
   endDate: end,
   rent,
   dueDay: 1,

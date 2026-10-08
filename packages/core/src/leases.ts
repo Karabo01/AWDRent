@@ -2,6 +2,7 @@ import { schema, type Tx, withAgency } from "@awdrent/db";
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { audit, changes } from "./audit";
+import { raiseRentForLease, todayInSouthAfrica } from "./billing";
 import { nextEftReference } from "./eft";
 import { parsePercentToBps, parseRandToCents } from "./money";
 import {
@@ -64,9 +65,17 @@ const int = (min: number, max: number, msg: string) =>
     .min(min, msg)
     .max(max, msg);
 
+/** "2026-11" from a month input; empty means "from the start month" (D44). */
+const optionalMonth = z
+  .string()
+  .transform((s) => s.trim())
+  .refine((s) => s === "" || /^\d{4}-(0[1-9]|1[0-2])$/.test(s), "Choose a month")
+  .transform((s) => (s ? `${s}-01` : null));
+
 /** Terms shared by creating and amending a lease. */
 const termsShape = {
   startDate: isoDate,
+  billingStartsOn: optionalMonth.default(""),
   endDate: optionalDate,
   rent: rand("rent").refine((c) => c > 0, "Rent must be more than R0"),
   dueDay: int(1, 31, "A day from 1 to 31"),
@@ -81,7 +90,13 @@ const termsShape = {
     .transform((s) => s || null),
 };
 
-function termsRules(v: { startDate: string; endDate: string | null; escalationPercent: number | null; escalationDate: string | null }, ctx: z.RefinementCtx) {
+function termsRules(
+  v: { startDate: string; endDate: string | null; billingStartsOn: string | null; escalationPercent: number | null; escalationDate: string | null },
+  ctx: z.RefinementCtx,
+) {
+  if (v.billingStartsOn && v.endDate && v.billingStartsOn > v.endDate) {
+    ctx.addIssue({ code: "custom", path: ["billingStartsOn"], message: "Must be before the end date" });
+  }
   if (v.endDate && v.endDate < v.startDate) ctx.addIssue({ code: "custom", path: ["endDate"], message: "Must be after the start date" });
   if ((v.escalationPercent === null) !== (v.escalationDate === null)) {
     ctx.addIssue({ code: "custom", path: ["escalationDate"], message: "Give both the escalation % and its date, or neither" });
@@ -124,6 +139,7 @@ function terms(l: Lease) {
   return {
     status: l.status,
     startDate: l.startDate,
+    billingStartsOn: l.billingStartsOn,
     endDate: l.endDate,
     rentCents: l.rentCents,
     dueDay: l.dueDay,
@@ -306,6 +322,7 @@ export async function createLease(actor: Actor, input: LeaseCreateInput): Promis
         eftReference,
         status: "draft",
         startDate: input.startDate,
+        billingStartsOn: input.billingStartsOn,
         endDate: input.endDate,
         rentCents: input.rent,
         dueDay: input.dueDay,
@@ -334,6 +351,8 @@ export async function activateLease(actor: Actor, leaseId: string): Promise<void
     const [after] = await tx.update(schema.leases).set({ status: "active" }).where(eq(schema.leases.id, leaseId)).returning();
     await recordEvent(tx, before, "activated", before.startDate, null, before, after!);
     await syncUnitStatus(tx, before.unitId);
+    // Months already started are charged now; later months by the daily job (D44)
+    await raiseRentForLease(tx, after!, todayInSouthAfrica());
   });
 }
 
@@ -343,10 +362,14 @@ export async function amendLease(actor: Actor, leaseId: string, input: LeaseAmen
   await runLeaseChange(actor, async (tx) => {
     const before = await loadForUpdate(tx, actor, leaseId);
     if (before.status === "ended" || before.status === "terminated") throw new LeaseRuleError("A closed lease cannot be changed.");
+    if (before.status !== "draft" && input.billingStartsOn !== before.billingStartsOn) {
+      throw new LeaseRuleError("The billing start month can only be changed while the lease is a draft.");
+    }
     const [after] = await tx
       .update(schema.leases)
       .set({
         startDate: input.startDate,
+        billingStartsOn: input.billingStartsOn,
         endDate: input.endDate,
         rentCents: input.rent,
         dueDay: input.dueDay,
@@ -398,14 +421,27 @@ export async function applyEscalation(actor: Actor, leaseId: string): Promise<vo
     const before = await loadForUpdate(tx, actor, leaseId);
     if (before.status !== "active" && before.status !== "notice_given") throw new LeaseRuleError("Only a live lease can escalate.");
     if (before.escalationBps === null || !before.escalationDate) throw new LeaseRuleError("This lease has no escalation set.");
-    const newRent = escalatedRent(before.rentCents, before.escalationBps);
-    const [after] = await tx
-      .update(schema.leases)
-      .set({ rentCents: newRent, escalationDate: sql`(${before.escalationDate}::date + interval '1 year')::date` })
-      .where(eq(schema.leases.id, leaseId))
-      .returning();
-    await recordEvent(tx, before, "escalated", before.escalationDate, null, before, after!);
+    await escalateInTx(tx, before);
   });
+}
+
+/**
+ * Applies one escalation inside the caller's transaction: rent × (1 + %),
+ * next escalation date a year on, recorded as a lease event. Used by staff
+ * (applyEscalation) and by the daily billing job (D46).
+ */
+export async function escalateInTx(tx: Tx, before: Lease): Promise<Lease> {
+  if (before.escalationBps === null || !before.escalationDate) throw new LeaseRuleError("This lease has no escalation set.");
+  const [after] = await tx
+    .update(schema.leases)
+    .set({
+      rentCents: escalatedRent(before.rentCents, before.escalationBps),
+      escalationDate: sql`(${before.escalationDate}::date + interval '1 year')::date`,
+    })
+    .where(eq(schema.leases.id, before.id))
+    .returning();
+  await recordEvent(tx, before, "escalated", before.escalationDate, null, before, after!);
+  return after!;
 }
 
 /** Integer-only: round half up to the nearest cent. */

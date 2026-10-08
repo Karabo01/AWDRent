@@ -1,4 +1,5 @@
 import { listLeases } from "@awdrent/core/leases";
+import { balances } from "@awdrent/core/ledger";
 import { formatCents } from "@awdrent/core/money";
 import { can } from "@awdrent/core/permissions";
 import Link from "next/link";
@@ -26,6 +27,7 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
   const s = await requireCan("records.view");
   const { q, status } = await searchParams;
   const rows = await load(() => listLeases(actorOf(s), { q, status }));
+  const balance = await load(() => balances(actorOf(s), rows.map((r) => r.lease.id)));
   return (
     <>
       <PageHeader
@@ -63,6 +65,7 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
               <TableHead>Unit</TableHead>
               <TableHead>Term</TableHead>
               <TableHead className="text-right">Rent</TableHead>
+              <TableHead className="text-right">Balance</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -82,6 +85,9 @@ export default async function LeasesPage({ searchParams }: { searchParams: Promi
                   {l.startDate} → {l.endDate ?? "monthly"}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{formatCents(l.rentCents)}</TableCell>
+                <TableCell className={`text-right tabular-nums ${(balance.get(l.id) ?? 0) > 0 ? "text-destructive" : ""}`}>
+                  {formatCents(balance.get(l.id) ?? 0)}
+                </TableCell>
                 <TableCell>
                   <Badge variant={l.status === "active" ? "default" : "secondary"}>{LEASE_STATUS_LABEL[l.status]}</Badge>
                 </TableCell>

@@ -105,5 +105,7 @@ Required columns are in **bold**.
 | eft_reference | The reference tenants already pay with — keep it so they need not change anything. 3–20 letters, digits or dashes; must be unique. Leave empty to have one assigned (e.g. `KL-0043`). |
 | end_date | Empty = month-to-month |
 | deposit, escalation_percent, escalation_date, notice_days (default 30), notes | Escalation % and date go together |
+| billing_starts | The first month AWDRent charges rent for, e.g. `2026-11` or `11/2026`. **Empty = the month after the import**, so months already settled in the old system are not charged again. |
+| opening_balance | What the tenant owes today: positive for arrears (`2500`), negative or in brackets for credit (`-1500` or `(1500)`). Only for active or notice-given leases. |
 
 Two active or notice-given leases on the same unit may not overlap in dates.

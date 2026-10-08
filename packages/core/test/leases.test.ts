@@ -83,6 +83,7 @@ function lease(unitId: string, primaryTenantId: string, extra: Partial<LeaseCrea
     primaryTenantId,
     coTenantIds: [],
     startDate: "2026-11-01",
+    billingStartsOn: null,
     endDate: "2027-10-31",
     rent: 750_000,
     dueDay: 1,

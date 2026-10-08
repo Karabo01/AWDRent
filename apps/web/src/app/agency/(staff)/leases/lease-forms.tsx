@@ -18,6 +18,8 @@ import {
 
 export interface TermsValues {
   startDate: string;
+  /** "2026-11"; empty = from the start month */
+  billingStartsOn: string;
   endDate: string | null;
   rent: string;
   dueDay: number;
@@ -35,6 +37,14 @@ function TermsFields({ state, values }: { state: FormState; values?: TermsValues
         <Field name="startDate" label="Start date" type="date" defaultValue={values?.startDate} state={state} required />
         <Field name="endDate" label="End date" type="date" hint="Leave empty for month-to-month." defaultValue={values?.endDate} state={state} />
       </div>
+      <Field
+        name="billingStartsOn"
+        label="Bill rent from"
+        type="month"
+        hint="Leave empty to charge from the start month. For a lease already running before AWDRent, choose the first month not yet paid. A full month is charged each month."
+        defaultValue={values?.billingStartsOn}
+        state={state}
+      />
       <div className="grid gap-4 sm:grid-cols-3">
         <Field name="rent" label="Monthly rent (R)" inputMode="decimal" defaultValue={values?.rent} state={state} required />
         <Field

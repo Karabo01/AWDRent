@@ -120,6 +120,20 @@
       "when": 1791466558134,
       "tag": "0016_import_jobs_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791471209875,
+      "tag": "0017_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791471213225,
+      "tag": "0018_ledger_rls",
+      "breakpoints": true
     }
   ]
 }

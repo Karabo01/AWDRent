@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LEASE_EVENT_LABEL, LEASE_STATUS_LABEL } from "@/lib/labels";
 import { actorOf, load } from "@/server/actor";
 import { requireCan } from "@/server/session";
+import { AccountCard } from "./account-card";
 import { AmendLeaseForm, LeaseStepButton, NoticeForm, RenewLeaseForm, TerminateForm } from "../lease-forms";
 
 export const metadata = { title: "Lease" };
@@ -113,6 +114,8 @@ export default async function LeasePage({
         </Card>
       </div>
 
+      <AccountCard session={s} leaseId={l.id} isDraft={l.status === "draft"} />
+
       {canEdit && !closed ? (
         <Card>
           <CardHeader>
@@ -175,6 +178,7 @@ export default async function LeasePage({
                     deposit: toRand(l.depositCents),
                     escalationPercent: l.escalationBps !== null ? bpsToPercentString(l.escalationBps) : "",
                     escalationDate: l.escalationDate,
+                    billingStartsOn: l.billingStartsOn ? l.billingStartsOn.slice(0, 7) : "",
                     noticeDays: l.noticeDays,
                     notes: l.notes,
                   }}

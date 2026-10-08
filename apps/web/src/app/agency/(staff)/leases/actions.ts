@@ -16,6 +16,7 @@ import {
   renewLease,
   terminateLease,
 } from "@awdrent/core/leases";
+import { addCharge, chargeSchema, LedgerRuleError, voidCharge, voidSchema } from "@awdrent/core/ledger";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -114,6 +115,38 @@ export async function terminateLeaseAction(leaseId: string, _prev: FormState, fo
   if (!parsed.data) return parsed.state;
   const failed = await leaseChange(form, () => terminateLease(actorOf(s), bound(leaseId), parsed.data));
   if (failed) return failed;
+  revalidatePath(`/leases/${leaseId}`);
+  return { ok: true };
+}
+
+export async function addChargeAction(leaseId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const s = await requireCan("ledger.charge");
+  const parsed = parseForm(chargeSchema, form);
+  if (!parsed.data) return parsed.state;
+  try {
+    const failed = await mutate(async () => {
+      await addCharge(actorOf(s), bound(leaseId), parsed.data);
+    });
+    if (failed) return failed;
+  } catch (err) {
+    if (err instanceof LedgerRuleError) return { error: err.message, values: formValues(form) };
+    throw err;
+  }
+  revalidatePath(`/leases/${leaseId}`);
+  return { ok: true };
+}
+
+export async function voidChargeAction(leaseId: string, chargeId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const s = await requireCan("ledger.void");
+  const parsed = parseForm(voidSchema, form);
+  if (!parsed.data) return parsed.state;
+  try {
+    const failed = await mutate(() => voidCharge(actorOf(s), z.uuid().parse(chargeId), parsed.data.reason));
+    if (failed) return failed;
+  } catch (err) {
+    if (err instanceof LedgerRuleError) return { error: err.message };
+    throw err;
+  }
   revalidatePath(`/leases/${leaseId}`);
   return { ok: true };
 }

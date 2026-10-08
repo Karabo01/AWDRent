@@ -21,7 +21,11 @@ export type Action =
   | "documents.view" // (scoped)
   | "documents.upload" // (scoped)
   | "documents.delete"
-  | "import.run";
+  | "import.run"
+  | "ledger.view" // lease statements and balances (scoped)
+  | "ledger.charge" // add a charge other than rent (scoped)
+  | "ledger.void" // void a charge
+  | "payments.approve"; // approve POPs / allocate bank lines
 
 const MATRIX: Record<Action, readonly StaffRole[]> = {
   "settings.manage": ["admin"],
@@ -37,6 +41,10 @@ const MATRIX: Record<Action, readonly StaffRole[]> = {
   "documents.upload": ["admin", "agent"],
   "documents.delete": ["admin"],
   "import.run": ["admin"],
+  "ledger.view": ["admin", "agent", "accounts"],
+  "ledger.charge": ["admin", "agent", "accounts"],
+  "ledger.void": ["admin", "accounts"],
+  "payments.approve": ["admin", "accounts"],
 };
 
 export function can(role: StaffRole, action: Action): boolean {

@@ -5,7 +5,10 @@ import { inArray, sql } from "drizzle-orm";
 import { audit } from "./audit";
 import { normaliseIdentifier } from "./crypto";
 import { claimImportedReference, nextEftReference, normaliseImportedReference } from "./eft";
+import { addMonths, monthStart, raiseRentForLease, todayInSouthAfrica } from "./billing";
 import { leaseCreateSchema, syncUnitStatus } from "./leases";
+import { recordOpeningBalance } from "./ledger";
+import { parseRandToCents } from "./money";
 import { ownerBankSchema, ownerBankValues, ownerInsertValues, ownerSchema } from "./owners";
 import { type Actor, authorise } from "./portfolio";
 import { propertySchema, unitSchema } from "./properties";
@@ -72,6 +75,8 @@ export const IMPORT_COLUMNS: Record<ImportFile, { required: string[]; optional: 
       "escalation_percent",
       "escalation_date",
       "notice_days",
+      "billing_starts",
+      "opening_balance",
       "notes",
     ],
   },
@@ -127,6 +132,31 @@ export function normaliseDate(value: string | undefined): string {
   return v;
 }
 
+/** "2026-11", "11/2026", "2026-11-01" or "01/11/2026" → "2026-11-01"; null if not a month. */
+export function parseMonth(value: string): string | null {
+  const v = value.trim();
+  let m = /^(\d{4})-(\d{1,2})(?:-\d{1,2})?$/.exec(v);
+  if (m) return validMonth(m[1]!, m[2]!);
+  m = /^(?:\d{1,2}[/.-])?(\d{1,2})[/.-](\d{4})$/.exec(v);
+  if (m) return validMonth(m[2]!, m[1]!);
+  return null;
+}
+
+function validMonth(year: string, month: string): string | null {
+  const n = Number(month);
+  return n >= 1 && n <= 12 ? `${year}-${String(n).padStart(2, "0")}-01` : null;
+}
+
+/** "1500", "-1 500,00", "" → cents (0 for empty); null if not an amount. */
+export function parseSignedRand(value: string | undefined): number | null {
+  const v = (value ?? "").trim();
+  if (!v) return 0;
+  // "-1500" or accounting style "(1500)"
+  const negative = /^-|^\(.*\)$/.test(v);
+  const cents = parseRandToCents(v.replace(/^-|[()]/g, ""));
+  return cents === null ? null : negative ? -cents : cents;
+}
+
 function yes(value: string | undefined): boolean {
   return /^(y|yes|true|1|ja)$/i.test((value ?? "").trim());
 }
@@ -155,8 +185,11 @@ interface Plan {
     coRefs: string[];
     eftReference: string | null;
     status: (typeof LEASE_STATUSES)[number];
+    /** Positive = arrears brought forward, negative = credit (D45). */
+    openingBalanceCents: number;
     values: {
       startDate: string;
+      billingStartsOn: string;
       endDate: string | null;
       rentCents: number;
       dueDay: number;
@@ -216,7 +249,7 @@ function uniqueRef(file: ImportFile, column: string, row: number, ref: string, s
   return true;
 }
 
-async function buildPlan(actor: Actor, files: ImportFiles): Promise<{ plan: Plan; report: ImportReport }> {
+async function buildPlan(actor: Actor, files: ImportFiles, today: string): Promise<{ plan: Plan; report: ImportReport }> {
   const errors: RowIssue[] = [];
   const warnings: RowIssue[] = [];
   const rows = readFiles(files, errors);
@@ -420,6 +453,21 @@ async function buildPlan(actor: Actor, files: ImportFiles): Promise<{ plan: Plan
       return;
     }
     const d = parsed.data;
+    // D45: bill from the month after the import unless the file says otherwise
+    const billingStartsOn = r.billing_starts?.trim() ? parseMonth(r.billing_starts) : addMonths(monthStart(today), 1);
+    if (!billingStartsOn) {
+      errors.push({ file: "leases", row, column: "billing_starts", message: "Use a month like 2026-11 or 11/2026" });
+      return;
+    }
+    const opening = parseSignedRand(r.opening_balance);
+    if (opening === null) {
+      errors.push({ file: "leases", row, column: "opening_balance", message: "An amount in rand; negative for credit, e.g. -1500" });
+      return;
+    }
+    if (opening !== 0 && !(status === "active" || status === "notice_given")) {
+      errors.push({ file: "leases", row, column: "opening_balance", message: "Only live leases (active or notice_given) can carry an opening balance" });
+      return;
+    }
     plan.leases.push({
       row,
       unitKey: key,
@@ -427,8 +475,10 @@ async function buildPlan(actor: Actor, files: ImportFiles): Promise<{ plan: Plan
       coRefs: coRefs.filter((c) => c.toLowerCase() !== primaryRef.toLowerCase()),
       eftReference,
       status: status as (typeof LEASE_STATUSES)[number],
+      openingBalanceCents: opening,
       values: {
         startDate: d.startDate,
+        billingStartsOn,
         endDate: d.endDate,
         rentCents: d.rent,
         dueDay: d.dueDay,
@@ -490,18 +540,23 @@ async function buildPlan(actor: Actor, files: ImportFiles): Promise<{ plan: Plan
 }
 
 /** Validates the files and reports, without writing anything. */
-export async function checkImport(actor: Actor, files: ImportFiles): Promise<ImportReport> {
+export async function checkImport(actor: Actor, files: ImportFiles, today = todayInSouthAfrica()): Promise<ImportReport> {
   authorise(actor, "import.run");
-  return (await buildPlan(actor, files)).report;
+  return (await buildPlan(actor, files, today)).report;
 }
 
 /**
  * Validates again and imports everything in one transaction. Throws
  * ImportInvalidError (nothing written) if any row has an error.
  */
-export async function runImport(actor: Actor, files: ImportFiles, fileNames: string[]): Promise<ImportReport> {
+export async function runImport(
+  actor: Actor,
+  files: ImportFiles,
+  fileNames: string[],
+  today = todayInSouthAfrica(),
+): Promise<ImportReport> {
   authorise(actor, "import.run");
-  const { plan, report } = await buildPlan(actor, files);
+  const { plan, report } = await buildPlan(actor, files, today);
   if (!report.ok) {
     await recordFailure(
       actor,
@@ -558,8 +613,11 @@ export async function runImport(actor: Actor, files: ImportFiles, fileNames: str
           type: "created",
           effectiveDate: l.values.startDate,
           note: "Imported from spreadsheet",
-          after: { status: l.status, ...l.values },
+          after: { status: l.status, openingBalanceCents: l.openingBalanceCents, ...l.values },
         });
+        // Rent from the billing start month to now, and any opening balance (D45)
+        await raiseRentForLease(tx, lease!, today);
+        await recordOpeningBalance(tx, lease!.id, l.openingBalanceCents, today);
         touchedUnits.add(unitId);
       }
       for (const unitId of touchedUnits) await syncUnitStatus(tx, unitId);

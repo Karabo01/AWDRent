@@ -1,6 +1,7 @@
 import { env } from "@awdrent/config";
 import { markScanFailed, scanDocument, stalePendingDocuments } from "@awdrent/core/documents";
 import { DOCUMENTS_QUEUE, enqueueScan, MAINTENANCE_QUEUE, redisConnection, type ScanJob } from "@awdrent/core/queue";
+import { runDailyBilling } from "@awdrent/core/ledger";
 import { snapshotUsage } from "@awdrent/core/usage";
 import { closeDb, schema, withPlatform } from "@awdrent/db";
 import { Queue, Worker } from "bullmq";
@@ -11,7 +12,8 @@ import { eq } from "drizzle-orm";
 //
 // Queues:
 //   documents    virus scan, then promote or delete (retried 5×, then marked failed)
-//   maintenance  repeatable: re-queue stuck scans (every 5 min), usage snapshot (nightly)
+//   maintenance  repeatable: daily billing (00:15 and 06:15), re-queue stuck scans
+//                (every 5 min), usage snapshot (nightly)
 
 const config = env();
 const connection = redisConnection();
@@ -44,6 +46,12 @@ documents.on("failed", async (job, err) => {
 });
 
 const maintenanceQueue = new Queue(MAINTENANCE_QUEUE, { connection });
+// Rent and escalations (D44, D46). Idempotent, so a second run catches up a missed one
+await maintenanceQueue.upsertJobScheduler(
+  "daily-billing",
+  { pattern: "15 0,6 * * *", tz: "Africa/Johannesburg" },
+  { name: "daily-billing" },
+);
 await maintenanceQueue.upsertJobScheduler("sweep-pending-scans", { every: 5 * 60_000 }, { name: "sweep-pending-scans" });
 // 02:00 SAST
 await maintenanceQueue.upsertJobScheduler("usage-snapshot", { pattern: "0 2 * * *", tz: "Africa/Johannesburg" }, { name: "usage-snapshot" });
@@ -60,6 +68,21 @@ const maintenance = new Worker(
         }
       }
       return { queued };
+    }
+    if (job.name === "daily-billing") {
+      let escalated = 0;
+      let raised = 0;
+      // One agency failing must not stop billing for the others
+      for (const agencyId of agencies) {
+        try {
+          const r = await runDailyBilling(agencyId);
+          escalated += r.escalated;
+          raised += r.raised;
+        } catch (err) {
+          console.error(`[billing] agency ${agencyId} failed:`, err);
+        }
+      }
+      return { escalated, raised };
     }
     if (job.name === "usage-snapshot") {
       for (const agencyId of agencies) await snapshotUsage(agencyId);
