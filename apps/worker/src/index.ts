@@ -3,6 +3,7 @@ import { scanLogo } from "@awdrent/core/branding";
 import { markScanFailed, scanDocument, stalePendingDocuments } from "@awdrent/core/documents";
 import { DOCUMENTS_QUEUE, enqueueScan, MAINTENANCE_QUEUE, redisConnection, type ScanJob } from "@awdrent/core/queue";
 import { runDailyBilling } from "@awdrent/core/ledger";
+import { deliverDue } from "@awdrent/core/messages";
 import { issueReceipts } from "@awdrent/core/receipts";
 import { snapshotUsage } from "@awdrent/core/usage";
 import { closeDb, schema, withPlatform } from "@awdrent/db";
@@ -15,8 +16,8 @@ import { eq } from "drizzle-orm";
 // Queues:
 //   documents    virus scan, then promote or delete (retried 5×, then marked failed)
 //   maintenance  repeatable: daily billing (00:15 and 06:15), receipts (every minute),
-//                re-queue stuck scans
-//                (every 5 min), usage snapshot (nightly)
+//                message delivery (every 20 s), re-queue stuck scans (every 5 min),
+//                usage snapshot (nightly)
 
 const config = env();
 const connection = redisConnection();
@@ -57,6 +58,8 @@ await maintenanceQueue.upsertJobScheduler(
 );
 // Receipts for newly approved payments, and cancelling those of reversed ones
 await maintenanceQueue.upsertJobScheduler("issue-receipts", { every: 60_000 }, { name: "issue-receipts" });
+// Sends due messages; retries and quiet hours are tracked on the message rows
+await maintenanceQueue.upsertJobScheduler("deliver-messages", { every: 20_000 }, { name: "deliver-messages" });
 await maintenanceQueue.upsertJobScheduler("sweep-pending-scans", { every: 5 * 60_000 }, { name: "sweep-pending-scans" });
 // 02:00 SAST
 await maintenanceQueue.upsertJobScheduler("usage-snapshot", { pattern: "0 2 * * *", tz: "Africa/Johannesburg" }, { name: "usage-snapshot" });
@@ -100,13 +103,28 @@ const maintenance = new Worker(
       }
       return { issued };
     }
+    if (job.name === "deliver-messages") {
+      const totals = { sent: 0, failed: 0, retrying: 0 };
+      for (const agencyId of agencies) {
+        try {
+          const r = await deliverDue(agencyId);
+          totals.sent += r.sent;
+          totals.failed += r.failed;
+          totals.retrying += r.retrying;
+        } catch (err) {
+          console.error(`[messages] agency ${agencyId} failed:`, err);
+        }
+      }
+      return totals;
+    }
     if (job.name === "usage-snapshot") {
       for (const agencyId of agencies) await snapshotUsage(agencyId);
       return { agencies: agencies.length };
     }
     throw new Error(`unknown maintenance job ${job.name}`);
   },
-  { connection, concurrency: 1 },
+  // Two at a time, so a long billing run does not hold up messages; every job is safe to overlap
+  { connection, concurrency: 2 },
 );
 
 console.log(`[worker] ready (env=${config.NODE_ENV}, clamd=${clamd.host}:${clamd.port})`);

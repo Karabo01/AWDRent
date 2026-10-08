@@ -27,7 +27,8 @@ export type Action =
   | "ledger.void" // void a charge
   | "payments.approve" // approve POPs / allocate bank lines
   | "deposits.manage" // record deposits received, interest, deductions, refunds
-  | "pop.submit"; // upload a proof of payment for a tenant (scoped)
+  | "pop.submit" // upload a proof of payment for a tenant (scoped)
+  | "messages.view"; // the notification log (scoped)
 
 const MATRIX: Record<Action, readonly StaffRole[]> = {
   "settings.manage": ["admin"],
@@ -49,6 +50,7 @@ const MATRIX: Record<Action, readonly StaffRole[]> = {
   "payments.approve": ["admin", "accounts"],
   "deposits.manage": ["admin", "accounts"],
   "pop.submit": ["admin", "agent", "accounts"],
+  "messages.view": ["admin", "agent", "accounts"],
 };
 
 export function can(role: StaffRole, action: Action): boolean {

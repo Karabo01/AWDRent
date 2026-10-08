@@ -9,6 +9,8 @@ import { importStatement, listLines, saveProfile, unallocateLine } from "../src/
 import { monthStart, todayInSouthAfrica } from "../src/billing";
 import { activateLease, createLease } from "../src/leases";
 import { recordOpeningBalance } from "../src/ledger";
+import { deliverDue } from "../src/messages";
+import type { OutgoingEmail } from "../src/messaging/providers";
 import { createOwner } from "../src/owners";
 import { type Actor, NotFoundError } from "../src/portfolio";
 import { createProperty, createUnit } from "../src/properties";
@@ -55,13 +57,13 @@ async function lease(actor: Actor) {
     fullName: "Ayanda Khumalo",
     idKind: "sa_id",
     idNumber: "",
-    email: null,
+    email: "ayanda@example.test",
     phone: null,
     employer: null,
     emergencyContactName: null,
     emergencyContactPhone: null,
     consentGiven: true,
-    emailOptIn: false,
+    emailOptIn: true,
     smsOptIn: false,
     whatsappOptIn: false,
     notes: null,
@@ -139,6 +141,26 @@ describe("receipts", () => {
     expect(Buffer.from(bytes).subarray(0, 5).toString()).toBe("%PDF-");
     // Kept for a visual check of the layout
     writeFileSync(`${process.env.TEMP ?? "/tmp"}/awdrent-receipt-sample.pdf`, bytes);
+
+    // payment_confirmed goes out with the receipt attached (spec)
+    const confirmations = await withAgency(adminA.ctx, (tx) =>
+      tx.select().from(schema.messages).where(eq(schema.messages.leaseId, l.id)),
+    );
+    const emails = confirmations.filter((m) => m.templateKey === "payment_confirmed" && m.channel === "email");
+    expect(emails).toHaveLength(2);
+    const first = emails.find((m) => m.attachmentDocumentId === receipts.find((r) => r.amountCents === 500_000)!.documentId)!;
+    expect(first.subject).toMatch(/^Payment received: receipt TT-R00000[12]$/);
+    expect(first.body).toContain("payment of R5 000,00");
+    expect(first.payload.link).toMatch(/\/r\/TT-R00000[12]$/);
+    await withAgency(adminA.ctx, (tx) => tx.update(schema.messages).set({ nextAttemptAt: new Date(0) }).where(eq(schema.messages.id, first.id)));
+    const sent: OutgoingEmail[] = [];
+    const fail = () => Promise.reject(new Error("not in this test"));
+    await deliverDue(a.agency.id, {
+      providers: { email: async (m) => (sent.push(m), { provider: "dev", providerId: m.messageId }), sms: fail },
+    });
+    const mail = sent.find((m) => m.messageId === first.id)!;
+    expect(mail.attachments.map((x) => x.filename)).toEqual([expect.stringMatching(/^Receipt TT-R00000[12]\.pdf$/)]);
+    expect(Buffer.from(mail.attachments[0]!.content).subarray(0, 5).toString()).toBe("%PDF-");
   });
 
   it("numbers each agency's receipts separately", async () => {

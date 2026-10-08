@@ -5,6 +5,8 @@ import { audit } from "./audit";
 import { allocateLineInTx, lockLine } from "./banking";
 import { uploadDocument } from "./documents";
 import { LedgerRuleError } from "./ledger";
+import { leaseContact, primaryTenantId, send } from "./messages";
+import { messageMoney } from "./messaging/render";
 import { parseRandToCents } from "./money";
 import { type Actor, assertLeaseInScope, authorise, leaseScope, NotFoundError } from "./portfolio";
 
@@ -58,6 +60,15 @@ export async function submitPop(
       })
       .returning();
     await audit(tx, { action: "pop.submitted", entity: "lease", entityId: input.leaseId, after: { popId: pop!.id, ...input.claim, via: input.via } });
+    const tenantId = input.tenantId ?? (await primaryTenantId(tx, input.leaseId));
+    if (tenantId) {
+      await send(tx, {
+        recipient: { kind: "tenant", tenantId },
+        templateKey: "pop_received",
+        leaseId: input.leaseId,
+        variables: { amount: messageMoney(input.claim.amount) },
+      });
+    }
     return { popId: pop!.id, documentId };
   });
 }
@@ -199,6 +210,15 @@ export async function rejectPop(actor: Actor, popId: string, reason: string): Pr
       .set({ status: "rejected", rejectReason: reason, reviewedAt: sql`now()`, reviewedBy: actor.userId })
       .where(eq(schema.proofsOfPayment.id, popId));
     await audit(tx, { action: "pop.rejected", entity: "lease", entityId: pop.leaseId, after: { popId, reason } });
+    const tenantId = pop.tenantId ?? (await primaryTenantId(tx, pop.leaseId));
+    if (tenantId) {
+      await send(tx, {
+        recipient: { kind: "tenant", tenantId },
+        templateKey: "pop_rejected",
+        leaseId: pop.leaseId,
+        variables: { amount: messageMoney(pop.claimedCents), reason, ...(await leaseContact(tx, pop.leaseId)) },
+      });
+    }
   });
 }
 

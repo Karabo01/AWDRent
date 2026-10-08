@@ -1,7 +1,7 @@
 import { env } from "@awdrent/config";
 
-// Minimal transactional email for Phase 1 (staff invites, password resets).
-// Phase 2 replaces callers with the messaging service and its log.
+// Account emails to staff (invites, password resets). Messages to tenants
+// go through the messaging service (messages.ts) and its log instead.
 
 export interface Email {
   to: string;

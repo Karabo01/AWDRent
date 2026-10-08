@@ -5,10 +5,12 @@ import { audit } from "./audit";
 import { logoFile } from "./branding";
 import { todayInSouthAfrica } from "./billing";
 import { getLedger } from "./ledger";
+import { agencyUrl, primaryTenantId, send, unitName } from "./messages";
+import { messageBalance, messageMoney } from "./messaging/render";
 import { formatCents } from "./money";
 import type { Brand } from "./pdf/branded";
 import { renderReceipt, renderStatement } from "./pdf/documents";
-import { type Actor, assertLeaseInScope, authorise } from "./portfolio";
+import { type Actor, assertLeaseInScope, authorise, NotFoundError } from "./portfolio";
 import { deleteObject, putGenerated } from "./storage";
 
 // Receipts (spec; Rental Housing Act) and on-demand statements, as branded
@@ -210,6 +212,23 @@ export async function issueReceipts(agencyId: string, limit = 50): Promise<{ iss
           documentId: doc!.id,
         });
         await audit(tx, { action: "receipt.issued", entity: "lease", entityId: payment.leaseId, after: { receiptNumber, paymentId: payment.id, amountCents: payment.amountCents } });
+        // payment_confirmed, with the receipt attached to the email (spec)
+        const tenantId = await primaryTenantId(tx, payment.leaseId);
+        if (tenantId) {
+          await send(tx, {
+            recipient: { kind: "tenant", tenantId },
+            templateKey: "payment_confirmed",
+            leaseId: payment.leaseId,
+            attachmentDocumentId: doc!.id,
+            variables: {
+              amount: messageMoney(payment.amountCents),
+              unit: await unitName(tx, payment.leaseId),
+              balance: messageBalance(balanceAfter),
+              link: await agencyUrl(tx, `/r/${encodeURIComponent(receiptNumber)}`),
+              receipt_number: receiptNumber,
+            },
+          });
+        }
       });
       issued++;
     } catch (err) {
@@ -253,4 +272,15 @@ export async function statementPdf(actor: Actor, leaseId: string): Promise<{ byt
   });
   await withAgency(actor.ctx, (tx) => audit(tx, { action: "statement.generated", entity: "lease", entityId: leaseId }));
   return { bytes: new Uint8Array(pdf), filename: `Statement ${particulars.lease.eftReference} ${today}.pdf` };
+}
+
+/** The lease a receipt belongs to, for the short receipt link in messages (/r/{number}). */
+export async function receiptLeaseId(actor: Actor, receiptNumber: string): Promise<string> {
+  authorise(actor, "ledger.view");
+  return withAgency({ ...actor.ctx, readOnly: true }, async (tx) => {
+    const [r] = await tx.select({ leaseId: schema.receipts.leaseId }).from(schema.receipts).where(eq(schema.receipts.receiptNumber, receiptNumber));
+    if (!r) throw new NotFoundError("Receipt");
+    await assertLeaseInScope(tx, actor, r.leaseId);
+    return r.leaseId;
+  });
 }
