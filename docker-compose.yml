@@ -12,11 +12,11 @@ x-app-env: &app-env
   REDIS_URL: redis://redis:6379
   RATE_LIMIT_STORAGE: redis
   AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-5}
-  S3_ENDPOINT: http://minio:9000
+  S3_ENDPOINT: http://seaweedfs:8333
   S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}
   S3_REGION: ${S3_REGION:-af-south-1}
-  S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
-  S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
   S3_BUCKET: ${S3_BUCKET:-awdrent}
   S3_FORCE_PATH_STYLE: "true"
   CLAMAV_HOST: clamav
@@ -67,42 +67,25 @@ services:
       timeout: 3s
       retries: 20
 
-  minio:
-    image: minio/minio:latest
+  # S3-compatible document store (decision D25). Private: only the app's
+  # signed links reach files. Contents are encrypted at rest.
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48
     restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
+    entrypoint: ["/bin/sh", "/etc/awdrent/entrypoint.sh"]
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
     volumes:
-      - miniodata:/data
+      - seaweeddata:/data
+      - ./docker/seaweedfs:/etc/awdrent:ro
     ports:
-      - "${MINIO_HOST_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
+      - "${S3_HOST_PORT:-8333}:8333"
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/cluster/healthz >/dev/null || exit 1"]
       interval: 5s
       timeout: 5s
-      retries: 20
-
-  # Creates the private bucket, then exits.
-  minio-init:
-    image: minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_healthy
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      S3_BUCKET: ${S3_BUCKET:-awdrent}
-    entrypoint:
-      - /bin/sh
-      - -c
-      - >-
-        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
-        mc mb --ignore-existing "local/$$S3_BUCKET" &&
-        mc anonymous set none "local/$$S3_BUCKET"
-    restart: "no"
+      retries: 30
 
   clamav:
     image: clamav/clamav:stable
@@ -118,7 +101,8 @@ services:
       retries: 20
       start_period: 180s
 
-  # Runs migrations (and the demo seed when SEED_DEMO=true), then exits.
+  # Creates the storage bucket, runs migrations (and the demo seed when
+  # SEED_DEMO=true), then exits.
   migrate:
     build:
       context: .
@@ -127,14 +111,17 @@ services:
       - /bin/sh
       - -c
       - >-
+        node --import tsx packages/core/scripts/ensure-bucket.ts &&
         node --import tsx packages/db/src/migrate.ts &&
-        if [ "$SEED_DEMO" = "true" ]; then node --import tsx packages/core/scripts/seed.ts; fi
+        if [ "$$SEED_DEMO" = "true" ]; then node --import tsx packages/core/scripts/seed.ts; fi
     environment:
       <<: *app-env
       DATABASE_OWNER_URL: postgres://awdrent_owner:${DB_OWNER_PASSWORD}@postgres:5432/${POSTGRES_DB:-awdrent}
       SEED_DEMO: ${SEED_DEMO:-false}
     depends_on:
       postgres:
+        condition: service_healthy
+      seaweedfs:
         condition: service_healthy
     restart: "no"
 
@@ -151,8 +138,6 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
 
   worker:
     build:
@@ -167,11 +152,9 @@ services:
         condition: service_healthy
       clamav:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
 
 volumes:
   pgdata:
   redisdata:
-  miniodata:
+  seaweeddata:
   clamdata:

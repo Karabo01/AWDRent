@@ -29,9 +29,11 @@ jobs:
           sed -i "s|^AUTH_RATE_LIMIT_MAX=.*|AUTH_RATE_LIMIT_MAX=100|" .env
 
       - name: Start backing services
-        run: docker compose up -d --wait postgres redis minio minio-init
+        run: |
+          docker compose up -d --wait postgres redis seaweedfs
+          npm ci
+          npm run storage:init
 
-      - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
 

@@ -51,7 +51,7 @@ binding until a later entry replaces it.
 | D22 | What a document belongs to | One nullable column per subject (owner, property, unit, tenant, lease) with a check that exactly one is set, instead of the spec's polymorphic `owner_type`/`owner_id`. Each is a composite `(agency_id, id)` foreign key, so a document cannot be attached across agencies. Phase 3 adds maintenance requests and applications the same way. |
 | D23 | Upload pipeline | Type is detected from the file's bytes (PDF, JPEG, PNG only), 10 MB limit. Files land in `agencies/{id}/quarantine/`, are scanned by ClamAV in the worker (5 attempts, then marked "could not be checked"), and move to `agencies/{id}/files/` when clean. Infected files are deleted. A sweep every 5 minutes re-queues scans that were never queued (e.g. Redis was down). |
 | D24 | Downloads | Only clean files, through `/documents/{id}/download`, which checks access, writes an audit entry and redirects to a 5-minute signed link. Read-only support sessions cannot download (the audit entry is a write). Only admins delete documents. |
-| D25 | Object storage — **open** | Open-source MinIO is archived and no longer receives security updates (dl.min.io, 2026). The code uses plain S3 calls, so any S3-compatible store works. Needs a decision before go-live; see the Phase 1 summary. Local testing used SeaweedFS. |
+| D25 | Object storage | Open-source MinIO is archived and no longer receives security updates (dl.min.io, 2026). Replaced by self-hosted SeaweedFS; see "Answers before Phase 2" below. |
 
 ## 2026-10-08 — CSV import (step 10)
 
@@ -59,3 +59,16 @@ binding until a later entry replaces it.
 |---|-------|----------|
 | D26 | Import design | Five CSV templates linked by the agency's own reference codes (see `docs/import-template.md`). "Check files" validates with the form rules and writes nothing; "Import" re-checks and imports in one transaction, all or nothing. Runs in the web request (up to 5,000 rows per file, 2 MB per file) rather than the worker: one-off, small, and the admin sees the result immediately. Every attempt is recorded in `import_jobs` (failures store file/row/column only, no cell values). |
 | D27 | Money limits | Rent and deposit are capped at R10 million so no amount can overflow its column; checked by the form/import rules before the database. |
+
+## 2026-10-08 — Answers before Phase 2
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D25 | Object storage (resolved) | Self-hosted SeaweedFS 4.48, single node, in the compose stack. Private bucket (anonymous requests refused), created by the migrate service. File contents encrypted at rest with `-s3.encryptVolumeData` and `-filer.encryptVolumeData`; without the S3 flag, S3 uploads were stored in plain text (checked). Backups take the whole `/data` volume, because the per-file keys are kept in SeaweedFS metadata. |
+| D28 | Wildcard TLS | DNS stays at Afrihost. `_acme-challenge.awdrent.co.za` is delegated by CNAME to a zone with an API, which Traefik updates for DNS-01 renewals. Steps in the README. |
+| D29 | Bank statement format | Parked until the agency confirms its bank and export format. |
+| D30 | Late fees | Parked. Phase 2 raises no automatic late fees; staff can still add a late-fee charge by hand. |
+| D31 | SMS provider | Clickatell. |
+| D32 | POP inbox | IMAP polling of a dedicated mailbox. |
+| D33 | Approving a POP | Approving a proof of payment means linking it to a matching trust-account bank line; that link is what creates the approved payment. A POP on its own never changes the balance (spec). |
+| D34 | Payment allocation | A payment pays off the oldest unpaid charge first (by due date, then created time); any excess is a credit carried forward. |

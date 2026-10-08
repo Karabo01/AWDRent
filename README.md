@@ -70,8 +70,9 @@ cp .env.example .env
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 # Locally, set AUTH_RATE_LIMIT_MAX=50 if you will run the Playwright tests.
 
-docker compose up -d postgres redis minio minio-init clamav
+docker compose up -d postgres redis seaweedfs clamav
 npm install
+npm run storage:init     # creates the private documents bucket
 npm run db:migrate
 npm run db:seed          # two demo agencies with logins (local only)
 npm run dev              # web on :3000
@@ -157,8 +158,9 @@ Playwright against a production build.
 ## Deploying on Coolify
 
 The app is one Docker Compose resource: `web`, `worker`, `postgres`, `redis`,
-object storage, `clamav`, plus a one-off `migrate` service that runs before
-`web` and `worker` start.
+`seaweedfs` (document storage), `clamav`, plus a one-off `migrate` service
+that creates the storage bucket and runs migrations before `web` and `worker`
+start.
 
 1. **Server.** 2–4 vCPU and 4–8 GB RAM. ClamAV alone needs about 1.5 GB of RAM
    for its signatures.
@@ -167,7 +169,7 @@ object storage, `clamav`, plus a one-off `migrate` service that runs before
 3. **Environment.** Paste the variables from `.env.example` into the
    resource's Environment Variables with production values:
    - `APP_BASE_DOMAIN=awdrent.co.za`, `APP_PROTOCOL=https`, `APP_PUBLIC_PORT=` (empty)
-   - strong, unique passwords for `POSTGRES_PASSWORD`, every `DB_*_PASSWORD` and the storage credentials
+   - strong, unique passwords for `POSTGRES_PASSWORD`, every `DB_*_PASSWORD`, and `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` (letters, digits and `_+=/.-` only)
    - new random values for the encryption, blind-index and auth secrets (also kept in your password manager)
    - `S3_PUBLIC_ENDPOINT=https://files.awdrent.co.za`
    - `SEED_DEMO=false` (the default)
@@ -177,23 +179,27 @@ object storage, `clamav`, plus a one-off `migrate` service that runs before
    served at `admin.awdrent.co.za` by the same container. (If your Coolify
    version will not accept a wildcard domain, add a Traefik router label with
    ``HostRegexp(`{sub:[a-z0-9-]+}.awdrent.co.za`)`` on the `web` service instead.) Map
-   `files.awdrent.co.za` to the storage service's port 9000. Do **not** expose
-   Postgres, Redis or ClamAV publicly; remove their `ports:` lines in
-   production, or override them in Coolify.
+   `files.awdrent.co.za` to the `seaweedfs` service's port 8333 (the S3 API;
+   browsers only ever reach it through signed links). Do **not** expose
+   Postgres, Redis, ClamAV or SeaweedFS's other ports (9333, 8080, 8888)
+   publicly; remove the `ports:` lines in production, or override them in
+   Coolify.
 5. **DNS at Afrihost.** Add `A` records for `awdrent.co.za` and `*.awdrent.co.za`
    pointing at the server.
-6. **Wildcard TLS.** A certificate for `*.awdrent.co.za` needs a DNS-01
-   challenge, and Afrihost has no DNS API that Traefik or Certbot can use. To
-   keep renewals automatic without moving your DNS:
+6. **Wildcard TLS, by CNAME delegation (decision D28).** A certificate for
+   `*.awdrent.co.za` needs a DNS-01 challenge, and Afrihost has no DNS API.
+   DNS stays at Afrihost; only the challenge record is delegated to a zone
+   Traefik can update, so renewals stay automatic:
    - Create a free Cloudflare account and add a zone just for
-     `acme.awdrent.co.za`, or run [acme-dns](https://github.com/joohoi/acme-dns).
-   - At Afrihost add one record: `_acme-challenge.awdrent.co.za CNAME _acme-challenge.acme.awdrent.co.za`
+     `acme.awdrent.co.za` (or run [acme-dns](https://github.com/joohoi/acme-dns)).
+     At Afrihost, add `NS` records for `acme.awdrent.co.za` pointing at the
+     two Cloudflare name servers it assigns.
+   - At Afrihost add: `_acme-challenge.awdrent.co.za CNAME _acme-challenge.acme.awdrent.co.za`
      (or the target acme-dns gives you).
-   - In Coolify, configure Traefik's DNS challenge with that provider's API token.
-
-   Certbot with a manual DNS challenge also works, but every renewal (each
-   90 days) then means editing a TXT record by hand, and a missed renewal
-   takes every agency offline.
+   - In Coolify's Traefik configuration, enable the DNS challenge for the
+     Cloudflare provider with an API token limited to *Zone.DNS:Edit* on the
+     `acme.awdrent.co.za` zone, and request `awdrent.co.za` plus `*.awdrent.co.za`.
+   - Check the first certificate is issued, and check its renewal date a month later.
 7. **Deploy.** Coolify builds both images. `migrate` runs the migrations and
    exits, and then `web` and `worker` start. Check `https://admin.awdrent.co.za/api/health`.
 8. **First platform admin.** In Coolify open a terminal on the `worker`
@@ -202,17 +208,20 @@ object storage, `clamav`, plus a one-off `migrate` service that runs before
 9. **First agency.** Sign in at `admin.awdrent.co.za`, set up 2FA, create the
    agency. Its admin receives an invite email.
 
-**Object storage.** The open-source MinIO project is archived and no longer
-receives security updates (see decision D25). The code uses plain S3 calls,
-so the `minio` service can be swapped for another S3-compatible store by
-changing the image and the `S3_*` variables. Decide this before go-live.
+**Document storage** is a single-node SeaweedFS (decision D25), started by
+`docker/seaweedfs/entrypoint.sh`. The bucket is private, so anonymous
+requests are refused, and file contents are encrypted at rest. The per-file
+encryption keys live in SeaweedFS's own metadata in the same `/data` volume,
+so a backup must take the whole volume, not only the `*.dat` files.
 
 ## Operations
 
-- **Backups** (spec): a nightly `pg_dump` of the `awdrent` database and a sync
-  of the storage bucket to an off-site bucket, kept for 30 days. Use Coolify's
-  scheduled database backups to S3, and test a restore monthly. **The
-  encryption keys must be backed up separately from the database.**
+- **Backups** (spec): a nightly `pg_dump` of the `awdrent` database and a
+  copy of the documents, kept off-site for 30 days. Use Coolify's scheduled
+  database backups, and for documents either snapshot the `seaweeddata`
+  volume or sync the bucket with an S3 tool (`rclone sync`) to an off-site
+  bucket. Test a restore monthly. **The `ENCRYPTION_KEYS` and
+  `BLIND_INDEX_KEY` values must be backed up separately from the database.**
 - **Key rotation**: add a new `version:key` to `ENCRYPTION_KEYS`, set
   `ENCRYPTION_ACTIVE_KEY_VERSION` to it and redeploy. New writes use the new
   key and old values still decrypt. A re-encryption job is still to do, before
