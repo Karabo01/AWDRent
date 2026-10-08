@@ -71,3 +71,23 @@ test.describe("messages", () => {
     await expect(card.getByText("Your wording")).toHaveCount(0);
   });
 });
+
+test.describe("reminders", () => {
+  test.use({ storageState: STATE.kgosiAgent });
+
+  test("an agent pauses a lease's overdue messages for a payment arrangement and resumes them", async ({ page }) => {
+    await page.goto(hostUrl(KGOSI.subdomain, `/leases?q=${encodeURIComponent("Lindiwe Nkosi")}`));
+    await page.locator("tbody a").first().click();
+    const card = page.locator("#reminders");
+    // Leave it as found if an earlier run stopped half-way
+    if (await card.getByRole("button", { name: "Resume overdue messages" }).isVisible()) {
+      await card.getByRole("button", { name: "Resume overdue messages" }).click();
+    }
+    await card.getByLabel("Reason").fill("Paying the arrears in two parts");
+    await card.getByRole("button", { name: "Pause overdue messages" }).click();
+    await expect(card.getByTestId("reminders-paused")).toContainText("Paying the arrears in two parts");
+    await card.getByRole("button", { name: "Resume overdue messages" }).click();
+    await expect(card.getByTestId("reminders-paused")).toHaveCount(0);
+    await expect(card.getByRole("button", { name: "Pause overdue messages" })).toBeVisible();
+  });
+});

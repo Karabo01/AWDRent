@@ -14,6 +14,7 @@ import { requireCan } from "@/server/session";
 import { AccountCard } from "./account-card";
 import { DepositCard } from "./deposit-card";
 import { PopsCard } from "./pops-card";
+import { RemindersCard } from "./reminders-card";
 import { AmendLeaseForm, LeaseStepButton, NoticeForm, RenewLeaseForm, TerminateForm } from "../lease-forms";
 
 export const metadata = { title: "Lease" };
@@ -119,6 +120,7 @@ export default async function LeasePage({
       <AccountCard session={s} leaseId={l.id} isDraft={l.status === "draft"} />
       <DepositCard session={s} leaseId={l.id} />
       <PopsCard session={s} leaseId={l.id} result={pop} />
+      {live ? <RemindersCard lease={l} canPause={can(s.user.role, "reminders.pause")} /> : null}
 
       {canEdit && !closed ? (
         <Card>
