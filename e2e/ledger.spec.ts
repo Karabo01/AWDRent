@@ -18,10 +18,11 @@ test.describe("lease account", () => {
     await expect(page.getByTestId("statement")).toContainText("Rent for");
     const before = await page.getByTestId("lease-balance").innerText();
 
-    await page.getByText("Add a charge").click();
-    await page.getByLabel("Amount (R)").fill("123.45");
-    await page.getByLabel("Description").fill("E2E water reading");
-    await page.getByRole("button", { name: "Add charge" }).click();
+    const account = page.locator("#account");
+    await account.getByText("Add a charge").click();
+    await account.getByLabel("Amount (R)").fill("123.45");
+    await account.getByLabel("Description").fill("E2E water reading");
+    await account.getByRole("button", { name: "Add charge" }).click();
     await expect(page.getByTestId("statement")).toContainText("E2E water reading");
     await expect(page.getByTestId("lease-balance")).not.toHaveText(before);
 

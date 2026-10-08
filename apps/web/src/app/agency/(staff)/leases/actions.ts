@@ -16,6 +16,15 @@ import {
   renewLease,
   terminateLease,
 } from "@awdrent/core/leases";
+import {
+  depositDeductionSchema,
+  depositMoneySchema,
+  recordDepositDeduction,
+  recordDepositInterest,
+  recordDepositReceived,
+  recordDepositRefund,
+  voidDepositEntry,
+} from "@awdrent/core/deposits";
 import { addCharge, chargeSchema, LedgerRuleError, voidCharge, voidSchema } from "@awdrent/core/ledger";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -149,4 +158,47 @@ export async function voidChargeAction(leaseId: string, chargeId: string, _prev:
   }
   revalidatePath(`/leases/${leaseId}`);
   return { ok: true };
+}
+
+// ─── deposits ────────────────────────────────────────────────────────
+
+async function depositChange(leaseId: string, fn: () => Promise<unknown>, form?: FormData): Promise<FormState> {
+  try {
+    const failed = await mutate(async () => {
+      await fn();
+    });
+    if (failed) return failed;
+  } catch (err) {
+    if (err instanceof LedgerRuleError) return { error: err.message, values: form ? formValues(form) : undefined };
+    throw err;
+  }
+  revalidatePath(`/leases/${leaseId}`);
+  return { ok: true };
+}
+
+export async function depositMoneyAction(
+  leaseId: string,
+  kind: "received" | "interest" | "refund",
+  _prev: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const s = await requireCan("deposits.manage");
+  const parsed = parseForm(depositMoneySchema, form);
+  if (!parsed.data) return parsed.state;
+  const fn = { received: recordDepositReceived, interest: recordDepositInterest, refund: recordDepositRefund }[kind];
+  return depositChange(leaseId, () => fn(actorOf(s), bound(leaseId), parsed.data), form);
+}
+
+export async function depositDeductionAction(leaseId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const s = await requireCan("deposits.manage");
+  const parsed = parseForm(depositDeductionSchema, form);
+  if (!parsed.data) return parsed.state;
+  return depositChange(leaseId, () => recordDepositDeduction(actorOf(s), bound(leaseId), parsed.data), form);
+}
+
+export async function voidDepositEntryAction(leaseId: string, entryId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const s = await requireCan("deposits.manage");
+  const parsed = parseForm(voidSchema, form);
+  if (!parsed.data) return parsed.state;
+  return depositChange(leaseId, () => voidDepositEntry(actorOf(s), z.uuid().parse(entryId), parsed.data.reason));
 }

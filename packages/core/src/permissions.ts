@@ -25,7 +25,8 @@ export type Action =
   | "ledger.view" // lease statements and balances (scoped)
   | "ledger.charge" // add a charge other than rent (scoped)
   | "ledger.void" // void a charge
-  | "payments.approve"; // approve POPs / allocate bank lines
+  | "payments.approve" // approve POPs / allocate bank lines
+  | "deposits.manage"; // record deposits received, interest, deductions, refunds
 
 const MATRIX: Record<Action, readonly StaffRole[]> = {
   "settings.manage": ["admin"],
@@ -45,6 +46,7 @@ const MATRIX: Record<Action, readonly StaffRole[]> = {
   "ledger.charge": ["admin", "agent", "accounts"],
   "ledger.void": ["admin", "accounts"],
   "payments.approve": ["admin", "accounts"],
+  "deposits.manage": ["admin", "accounts"],
 };
 
 export function can(role: StaffRole, action: Action): boolean {

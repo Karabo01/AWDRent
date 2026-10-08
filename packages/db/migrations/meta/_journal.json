@@ -134,6 +134,20 @@
       "when": 1791471213225,
       "tag": "0018_ledger_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791474649383,
+      "tag": "0019_deposits",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791474652553,
+      "tag": "0020_deposits_rls",
+      "breakpoints": true
     }
   ]
 }

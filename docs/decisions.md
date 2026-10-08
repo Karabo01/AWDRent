@@ -82,8 +82,8 @@ binding until a later entry replaces it.
 | D37 | POP mailbox | One AWDRent mailbox read over IMAP. Each agency gets its own address on it, `pop+{subdomain}@awdrent.co.za`; agencies forward their own `pop@` address there. |
 | D38 | Clickatell account | One AWDTECH account. Each agency's sender ID is registered under it; SMS cost is recharged through the per-agency usage counts. |
 | D39 | SMS opt-out | An opt-out link in the SMS and in the tenant portal. No "reply STOP" for now (needs a two-way number). |
-| D40 | Deposit interest | Recorded as the bank actually pays it, entered from the investment account statement, rather than calculated from a rate. (Proposed in the Phase 2 plan; not objected to.) |
-| D41 | Tenant and owner logins | A third Better Auth instance with its own tables: one-time codes by email or SMS (10-minute expiry, 5 attempts), rate limited, valid only on the agency's own host, no passwords. (Proposed in the Phase 2 plan; not objected to.) |
+| D40 | Deposit interest | Recorded as the bank actually pays it, entered from the investment account statement, rather than calculated from a rate. Confirmed. |
+| D41 | Tenant and owner logins | A third Better Auth instance with its own tables: one-time codes by email or SMS (10-minute expiry, 5 attempts), rate limited, valid only on the agency's own host, no passwords. Confirmed. |
 
 ## 2026-10-08 — Rent ledger (Phase 2, step 1)
 
@@ -92,7 +92,7 @@ binding until a later entry replaces it.
 | D42 | Charges are never edited | A charge cannot be changed or deleted. A mistake is voided with a reason (audited) and, if needed, a corrected charge is added. Voided charges stay visible on the statement. |
 | D43 | Allocation is computed | Payments are not stored against charges. Which charges are paid is worked out oldest-first each time (D34), so voiding a charge or adding a payment can never leave stale allocations. The balance is always charges minus approved payments (spec). |
 | D44 | When billing starts | Each lease has a "bill rent from" month, defaulting to its start month and editable while it is a draft. Rent is raised for every month from then until the lease ends, up to the current month, on the 1st of the month (due on the lease's due day, D18). Activating a lease raises any months already started. |
-| D45 | Imported leases | Imported leases start billing in the month after the import unless the file says otherwise (`billing_starts`), so months already settled in the old system are not charged again. An `opening_balance` column brings over arrears (a charge) or credit (a payment marked "opening balance", the only payment not tied to a bank line). **To confirm with the agency during migration.** |
+| D45 | Imported leases | Imported leases start billing in the month after the import unless the file says otherwise (`billing_starts`), so months already settled in the old system are not charged again. An `opening_balance` column brings over arrears (a charge) or credit (a payment marked "opening balance", the only payment not tied to a bank line). Confirmed. |
 | D46 | Escalations | Applied automatically by the daily job on the escalation date, before that day's rent is raised (completes D20). |
 
 ## 2026-10-08 — Lease generation and e-signing
@@ -104,3 +104,10 @@ binding until a later entry replaces it.
 | D49 | Signing order | Tenant (and co-tenants), then owner (when the owner signs), then agent. Each is invited only after the previous signer has signed. |
 | D50 | Agency branding | Everything tenants, owners and applicants see carries the agency's branding: portal, emails, PDFs, signing pages. The agency uploads its logo and sets its colour in Settings. |
 | D51 | Lease template | The agency has a lease it must keep; its merge fields are built from that document once received. |
+
+## 2026-10-08 — Deposits (Phase 2, step 2)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D52 | Reversing a payment | An approved payment is never edited; it can only be reversed, with a reason (bounced EFT, wrong match, voided deposit deduction). Reversed payments stay on the statement and no longer count. Enforced by a database trigger. |
+| D53 | Deposit entries | Received, interest (D40), deductions and refund entries; held = received + interest − deductions − refunds, always computed. Deductions only once notice is given or the lease has closed; refunds only after it has closed; never more than is held. A deduction for unpaid rent also posts a "paid from deposit" payment to the rent ledger; voiding that deduction reverses the payment. Admins and accounts manage deposits; agents can see them. Deposit receipts will be linked to bank lines in step 3. |

@@ -77,7 +77,7 @@ describe("oldest-first allocation (D34)", () => {
 
 describe("statement", () => {
   it("runs the balance over charges and approved payments only", () => {
-    const base = { leaseId: "l", agencyId: "a", updatedAt: new Date(), createdBy: null };
+    const base = { leaseId: "l", agencyId: "a", updatedAt: new Date(), createdBy: null, reversedAt: null, reversalReason: null, reversedBy: null };
     const lines = statement(
       [
         { ...base, ...charge("c1", "2026-01-01", 1000), type: "rent", period: "2026-01-01", description: "Rent Jan", voidReason: null, voidedBy: null },

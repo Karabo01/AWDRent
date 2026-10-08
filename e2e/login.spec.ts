@@ -21,6 +21,7 @@ test.describe("staff sign-in", () => {
   test("sends visitors without a session to the sign-in page", async ({ page }) => {
     await page.goto(hostUrl(KGOSI.subdomain, "/owners"));
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByText(KGOSI.name)).toBeVisible();
+    // The agency logo when it has one, otherwise its name
+    await expect(page.getByRole("img", { name: KGOSI.name }).or(page.getByText(KGOSI.name))).toBeVisible();
   });
 });

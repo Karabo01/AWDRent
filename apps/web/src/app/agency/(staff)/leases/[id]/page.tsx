@@ -12,6 +12,7 @@ import { LEASE_EVENT_LABEL, LEASE_STATUS_LABEL } from "@/lib/labels";
 import { actorOf, load } from "@/server/actor";
 import { requireCan } from "@/server/session";
 import { AccountCard } from "./account-card";
+import { DepositCard } from "./deposit-card";
 import { AmendLeaseForm, LeaseStepButton, NoticeForm, RenewLeaseForm, TerminateForm } from "../lease-forms";
 
 export const metadata = { title: "Lease" };
@@ -115,6 +116,7 @@ export default async function LeasePage({
       </div>
 
       <AccountCard session={s} leaseId={l.id} isDraft={l.status === "draft"} />
+      <DepositCard session={s} leaseId={l.id} />
 
       {canEdit && !closed ? (
         <Card>

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, date, foreignKey, index, integer, pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { check, date, foreignKey, index, integer, pgEnum, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { agencyColumn, createdBy, pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
 import { leases } from "./leases";
@@ -50,13 +50,17 @@ export const charges = pgTable(
   ],
 );
 
-export const paymentSource = pgEnum("payment_source", ["bank_import", "pop", "manual", "opening_balance"]);
-export const paymentStatus = pgEnum("payment_status", ["pending", "approved", "rejected"]);
+// "deposit": arrears paid from the tenant's deposit at the end of a lease
+export const paymentSource = pgEnum("payment_source", ["bank_import", "pop", "manual", "opening_balance", "deposit"]);
+// "reversed": an approved payment taken back (bounced, wrongly matched, voided deposit deduction)
+export const paymentStatus = pgEnum("payment_status", ["pending", "approved", "rejected", "reversed"]);
 
 /**
  * Money received for a lease. Only approved payments count toward the
  * balance, and a payment is approved only when matched to a trust-account
- * bank line (spec, D33); "opening_balance" is the one exception (D45).
+ * bank line (spec, D33). The exceptions are "opening_balance" (D45) and
+ * "deposit" (arrears paid from the deposit). An approved payment can only be
+ * reversed, with a reason; it is never edited.
  */
 export const payments = pgTable(
   "payments",
@@ -74,13 +78,18 @@ export const payments = pgTable(
     notes: text(),
     approvedBy: uuid(),
     approvedAt: tstz(),
+    reversedAt: tstz(),
+    reversalReason: text(),
+    reversedBy: uuid(),
     ...timestamps,
     createdBy: createdBy(),
   },
   (t) => [
     index("payments_agency_lease_paid_idx").on(t.agencyId, t.leaseId, t.paidOn),
+    unique("payments_agency_id_id_key").on(t.agencyId, t.id),
     foreignKey({ name: "payments_lease_fk", columns: [t.agencyId, t.leaseId], foreignColumns: [leases.agencyId, leases.id] }),
     check("payments_amount_range", sql`${t.amountCents} > 0 and ${t.amountCents} <= 1000000000`),
-    check("payments_approved_fields", sql`(${t.status} = 'approved') = (${t.approvedAt} is not null)`),
+    check("payments_approved_fields", sql`(${t.status}::text in ('approved', 'reversed')) = (${t.approvedAt} is not null)`),
+    check("payments_reversed_fields", sql`(${t.status}::text = 'reversed') = (${t.reversedAt} is not null and ${t.reversalReason} is not null)`),
   ],
 );

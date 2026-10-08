@@ -100,11 +100,23 @@ export function statement(charges: Charge[], payments: Payment[]): StatementLine
       created: p.createdAt.getTime(),
       kind: "payment" as const,
       id: p.id,
-      description: p.source === "opening_balance" ? "Opening balance (credit)" : `Payment${p.reference ? ` ${p.reference}` : ""}`,
+      description:
+        p.source === "opening_balance"
+          ? "Opening balance (credit)"
+          : p.source === "deposit"
+            ? "Paid from deposit"
+            : `Payment${p.reference ? ` ${p.reference}` : ""}`,
       debitCents: 0,
       creditCents: p.amountCents,
       counts: p.status === "approved",
-      note: p.status === "approved" ? null : p.status === "pending" ? "Awaiting bank confirmation" : "Rejected",
+      note:
+        p.status === "approved"
+          ? null
+          : p.status === "pending"
+            ? "Awaiting bank confirmation"
+            : p.status === "reversed"
+              ? `Reversed: ${p.reversalReason}`
+              : "Rejected",
     })),
   ].sort((a, b) => a.date.localeCompare(b.date) || a.order - b.order || a.created - b.created);
   let balance = 0;

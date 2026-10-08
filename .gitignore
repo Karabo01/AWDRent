@@ -12,3 +12,7 @@ test-results/
 .turbo/
 .DS_Store
 e2e/.auth/
+
+# Real agency documents (personal data) are never committed
+docs/*.pdf
+docs/*.docx
