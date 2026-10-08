@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { logoSrc } from "@/lib/branding";
 import { AuthCard } from "@/components/auth/auth-card";
 import { SetupTwoFactor } from "@/components/auth/setup-two-factor";
 import { currentAgency, optionalStaffSession } from "@/server/session";
@@ -11,7 +12,7 @@ export default async function SetupTwoFactorPage() {
   if (!s) redirect("/login");
   if (s.twoFactorEnabled) redirect("/");
   return (
-    <AuthCard brand={agency.name} title="Set up two-factor authentication">
+    <AuthCard brand={agency.name} logo={logoSrc(agency)} title="Set up two-factor authentication">
       <SetupTwoFactor audience="staff" />
     </AuthCard>
   );

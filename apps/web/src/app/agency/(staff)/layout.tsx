@@ -1,6 +1,7 @@
 import { type Action, can } from "@awdrent/core/permissions";
 import { AppShell, type NavItem } from "@/components/shell/app-shell";
 import { SupportBanner } from "@/components/shell/support-banner";
+import { logoSrc } from "@/lib/branding";
 import { requireStaff, type StaffRole } from "@/server/session";
 
 const NAV: (NavItem & { needs?: Action })[] = [
@@ -22,6 +23,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   return (
     <AppShell
       brand={agency.name}
+      logo={logoSrc(agency)}
       audience="staff"
       userLabel={support ? user.name : `${user.name} · ${ROLE_LABEL[user.role]}`}
       nav={NAV.filter((n) => !n.needs || can(user.role, n.needs))}

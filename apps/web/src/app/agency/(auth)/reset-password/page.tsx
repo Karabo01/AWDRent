@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { logoSrc } from "@/lib/branding";
 import { AuthCard } from "@/components/auth/auth-card";
 import { ResetPasswordForm } from "@/components/auth/password-forms";
 import { currentAgency } from "@/server/session";
@@ -9,7 +10,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
   const agency = await currentAgency();
   const { token } = await searchParams;
   return (
-    <AuthCard brand={agency.name} title="Choose a password">
+    <AuthCard brand={agency.name} logo={logoSrc(agency)} title="Choose a password">
       {token ? (
         <ResetPasswordForm token={token} />
       ) : (

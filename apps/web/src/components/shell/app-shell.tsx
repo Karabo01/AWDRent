@@ -10,6 +10,7 @@ export interface NavItem {
 /** Top bar + side navigation shared by the staff back office and the platform console. */
 export function AppShell({
   brand,
+  logo,
   nav,
   userLabel,
   audience,
@@ -17,6 +18,7 @@ export function AppShell({
   children,
 }: {
   brand: string;
+  logo?: string;
   nav: NavItem[];
   userLabel: string;
   audience: AuthAudience;
@@ -27,7 +29,8 @@ export function AppShell({
     <div className="min-h-screen">
       {banner}
       <header className="flex h-14 items-center justify-between border-b px-4">
-        <Link href="/" className="font-semibold text-primary">
+        <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
+          {logo ? <img src={logo} alt="" className="h-8 max-w-32 object-contain" /> : null}
           {brand}
         </Link>
         <div className="flex items-center gap-3 text-sm text-muted-foreground">

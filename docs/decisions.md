@@ -94,3 +94,13 @@ binding until a later entry replaces it.
 | D44 | When billing starts | Each lease has a "bill rent from" month, defaulting to its start month and editable while it is a draft. Rent is raised for every month from then until the lease ends, up to the current month, on the 1st of the month (due on the lease's due day, D18). Activating a lease raises any months already started. |
 | D45 | Imported leases | Imported leases start billing in the month after the import unless the file says otherwise (`billing_starts`), so months already settled in the old system are not charged again. An `opening_balance` column brings over arrears (a charge) or credit (a payment marked "opening balance", the only payment not tied to a bank line). **To confirm with the agency during migration.** |
 | D46 | Escalations | Applied automatically by the daily job on the escalation date, before that day's rent is raised (completes D20). |
+
+## 2026-10-08 — Lease generation and e-signing
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D47 | E-signing | Leases are generated from the agency's template and signed on the platform: built in, no third-party signing service. Each signer gets a personal link, confirms with a one-time code, and signs; the final PDF gets a certificate page (signers, times, device/IP, document fingerprint) and is filed with the lease. Added to Phase 2 after messaging and the tenant portal; Phase 3 onboarding feeds approved applications into it. |
+| D48 | Landlord signatory | Per lease: either the owner signs personally, or the agent signs on the owner's behalf under the agency's mandate. |
+| D49 | Signing order | Tenant (and co-tenants), then owner (when the owner signs), then agent. Each is invited only after the previous signer has signed. |
+| D50 | Agency branding | Everything tenants, owners and applicants see carries the agency's branding: portal, emails, PDFs, signing pages. The agency uploads its logo and sets its colour in Settings. |
+| D51 | Lease template | The agency has a lease it must keep; its merge fields are built from that document once received. |

@@ -1,4 +1,5 @@
 import { env } from "@awdrent/config";
+import { scanLogo } from "@awdrent/core/branding";
 import { markScanFailed, scanDocument, stalePendingDocuments } from "@awdrent/core/documents";
 import { DOCUMENTS_QUEUE, enqueueScan, MAINTENANCE_QUEUE, redisConnection, type ScanJob } from "@awdrent/core/queue";
 import { runDailyBilling } from "@awdrent/core/ledger";
@@ -29,16 +30,16 @@ async function activeAgencyIds(): Promise<string[]> {
 const documents = new Worker<ScanJob>(
   DOCUMENTS_QUEUE,
   async (job) => {
-    const outcome = await scanDocument(job.data.agencyId, job.data.documentId, clamd);
-    return { outcome };
+    if (job.name === "scan-logo") return { outcome: await scanLogo(job.data.agencyId, job.data.logoKey!, clamd) };
+    return { outcome: await scanDocument(job.data.agencyId, job.data.documentId!, clamd) };
   },
   { connection, concurrency: 4 },
 );
 
 documents.on("failed", async (job, err) => {
   if (!job) return;
-  console.error(`[documents] scan ${job.data.documentId} failed (attempt ${job.attemptsMade}):`, err.message);
-  if (job.attemptsMade >= (job.opts.attempts ?? 1)) {
+  console.error(`[documents] scan ${job.data.documentId ?? job.data.logoKey} failed (attempt ${job.attemptsMade}):`, err.message);
+  if (job.attemptsMade >= (job.opts.attempts ?? 1) && job.data.documentId) {
     await markScanFailed(job.data.agencyId, job.data.documentId, err.message).catch((e: unknown) =>
       console.error("[documents] could not mark scan failed", e),
     );
