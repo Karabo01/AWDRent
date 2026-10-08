@@ -33,3 +33,13 @@ binding until a later entry replaces it.
 | D14 | What agents see | Properties assigned to them; units of those properties; owners who have one of those properties or whom the agent created. A property an agent creates is put in their own portfolio automatically. Only admins assign portfolios. |
 | D15 | Deleting records | Owners, properties and units are archived, never deleted, so audit history and future ledgers stay intact. The app role has no DELETE on them. |
 | D16 | Owner identity numbers | SA ID numbers are validated (date and Luhn check digit). Passports and company/trust registration numbers are accepted as 5–20 letters, digits or slashes. Stored encrypted with a per-agency blind index for duplicate checks. |
+
+## 2026-10-08 — Tenants and leases (step 8)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D17 | Lease terms | A lease is one row for the whole tenancy. Renewal, escalation and amendments update it and append a `lease_events` row with before/after, so the EFT reference (D3) and the Phase 2 balance continue across terms. Events are append-only. |
+| D18 | Due day 29–31 | Stored as given (1–31). In shorter months rent is due on the month's last day. Applies when charges are raised in Phase 2. |
+| D19 | Overlapping leases | A unit cannot have two active/notice-given leases with overlapping dates (database exclusion constraint). Drafts may overlap, e.g. preparing the next tenant's lease during a notice period. |
+| D20 | Escalation | Applied by a staff action in Phase 1 (automatic from Phase 2): rent × (1 + %) rounded half-up to the cent with integer maths; the next escalation date moves on one year. |
+| D21 | Imported EFT references | Any bank-safe reference is accepted on import: uppercase letters, digits and dashes, 3–20 characters. Generated ones are always `PREFIX-NNNN`. |

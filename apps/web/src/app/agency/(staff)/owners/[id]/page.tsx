@@ -6,14 +6,15 @@ import { listProperties } from "@awdrent/core/properties";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { RevealValue } from "@/components/form/reveal";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { actorOf, load } from "@/server/actor";
 import { requireCan } from "@/server/session";
-import { setOwnerArchivedAction } from "../actions";
-import { OwnerBankForm, OwnerForm, RevealBankAccount } from "../owner-forms";
+import { revealOwnerBankAction, setOwnerArchivedAction } from "../actions";
+import { OwnerBankForm, OwnerForm } from "../owner-forms";
 
 export const metadata = { title: "Owner" };
 
@@ -81,7 +82,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             <dt className="text-muted-foreground">Account number</dt>
             <dd>
               {canBank && owner.bankAccountNoLast4 ? (
-                <RevealBankAccount ownerId={owner.id} masked={mask(owner.bankAccountNoLast4)} />
+                <RevealValue masked={mask(owner.bankAccountNoLast4)} reveal={revealOwnerBankAction.bind(null, owner.id)} testId="bank-account" />
               ) : (
                 <span className="font-mono">{mask(owner.bankAccountNoLast4)}</span>
               )}

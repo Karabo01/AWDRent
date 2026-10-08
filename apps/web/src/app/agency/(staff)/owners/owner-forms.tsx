@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState } from "react";
 import { Field, FormMessage } from "@/components/form/fields";
 import { SelectField } from "@/components/form/select-field";
 import { Button } from "@/components/ui/button";
 import type { FormState } from "@/server/forms";
-import { createOwnerAction, revealOwnerBankAction, updateOwnerAction, updateOwnerBankAction } from "./actions";
+import { createOwnerAction, updateOwnerAction, updateOwnerBankAction } from "./actions";
 
 export interface OwnerFormValues {
   kind: string;
@@ -122,35 +122,5 @@ export function OwnerBankForm({
         Save bank details
       </Button>
     </form>
-  );
-}
-
-export function RevealBankAccount({ ownerId, masked }: { ownerId: string; masked: string }) {
-  const [value, setValue] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
-  return (
-    <span className="inline-flex items-center gap-2">
-      <span className="font-mono" data-testid="bank-account">
-        {value ?? masked}
-      </span>
-      {value === null ? (
-        <button
-          type="button"
-          className="text-xs underline"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const r = await revealOwnerBankAction(ownerId);
-              if (r.error) setError(r.error);
-              else setValue(r.value ?? "—");
-            })
-          }
-        >
-          Show (logged)
-        </button>
-      ) : null}
-      {error ? <span className="text-xs text-destructive">{error}</span> : null}
-    </span>
   );
 }

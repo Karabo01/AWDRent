@@ -90,6 +90,9 @@ function present(o: typeof schema.owners.$inferSelect) {
 }
 export type OwnerView = ReturnType<typeof present>;
 
+// Correlated subqueries name the outer table explicitly: in a single-table
+// select Drizzle renders ${table.column} unqualified, which would bind to the
+// subquery's own column.
 export async function listOwners(actor: Actor, opts: { q?: string; includeArchived?: boolean } = {}) {
   authorise(actor, "records.view");
   return withAgency(actor.ctx, async (tx) => {
@@ -97,7 +100,7 @@ export async function listOwners(actor: Actor, opts: { q?: string; includeArchiv
     const rows = await tx
       .select({
         owner: schema.owners,
-        propertyCount: sql<number>`(select count(*)::int from ${schema.properties} p where p.owner_id = ${schema.owners.id} and p.archived_at is null)`,
+        propertyCount: sql<number>`(select count(*)::int from ${schema.properties} p where p.owner_id = "owners"."id" and p.archived_at is null)`,
       })
       .from(schema.owners)
       .where(

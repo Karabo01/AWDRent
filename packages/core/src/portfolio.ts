@@ -63,6 +63,48 @@ export function ownerScope(tx: Tx, actor: Actor): SQL | undefined {
   );
 }
 
+function myUnitIds(actor: Actor) {
+  return sql`(select ${schema.units.id} from ${schema.units}
+              where ${schema.units.propertyId} in ${myPropertyIds(actor)})`;
+}
+
+export function leaseScope(actor: Actor): SQL | undefined {
+  if (!isScopedToPortfolio(actor.role)) return undefined;
+  if (!actor.userId) return sql`false`;
+  return inArray(schema.leases.unitId, myUnitIds(actor));
+}
+
+/** Agents see tenants on leases in their portfolio, and tenants they created. */
+export function tenantScope(actor: Actor): SQL | undefined {
+  if (!isScopedToPortfolio(actor.role)) return undefined;
+  if (!actor.userId) return sql`false`;
+  return or(
+    eq(schema.tenants.createdBy, actor.userId),
+    inArray(
+      schema.tenants.id,
+      sql`(select lt.tenant_id from ${schema.leaseTenants} lt
+           join ${schema.leases} l on l.id = lt.lease_id
+           where l.unit_id in ${myUnitIds(actor)})`,
+    ),
+  );
+}
+
+export async function assertLeaseInScope(tx: Tx, actor: Actor, leaseId: string): Promise<void> {
+  const [row] = await tx
+    .select({ id: schema.leases.id })
+    .from(schema.leases)
+    .where(and(eq(schema.leases.id, leaseId), leaseScope(actor)));
+  if (!row) throw new NotFoundError("Lease");
+}
+
+export async function assertTenantInScope(tx: Tx, actor: Actor, tenantId: string): Promise<void> {
+  const [row] = await tx
+    .select({ id: schema.tenants.id })
+    .from(schema.tenants)
+    .where(and(eq(schema.tenants.id, tenantId), tenantScope(actor)));
+  if (!row) throw new NotFoundError("Tenant");
+}
+
 export async function assertPropertyInScope(tx: Tx, actor: Actor, propertyId: string): Promise<void> {
   const [row] = await tx
     .select({ id: schema.properties.id })

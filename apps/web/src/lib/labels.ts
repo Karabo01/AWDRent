@@ -9,3 +9,22 @@ export const UNIT_STATUS_OPTIONS = [
 ];
 
 export const UNIT_STATUS_LABEL: Record<string, string> = Object.fromEntries(UNIT_STATUS_OPTIONS.map((o) => [o.value, o.label]));
+
+export const LEASE_STATUS_LABEL: Record<string, string> = {
+  draft: "Draft",
+  active: "Active",
+  notice_given: "Notice given",
+  ended: "Ended",
+  terminated: "Terminated",
+};
+
+export const LEASE_EVENT_LABEL: Record<string, string> = {
+  created: "Created",
+  activated: "Activated",
+  amended: "Amended",
+  renewed: "Renewed",
+  escalated: "Rent escalated",
+  notice_given: "Notice given",
+  terminated: "Terminated",
+  ended: "Ended",
+};

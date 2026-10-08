@@ -61,6 +61,9 @@ export class DuplicateUnitError extends Error {
   }
 }
 
+// Correlated subqueries name the outer table explicitly: in a single-table
+// select Drizzle renders ${table.column} unqualified, which would bind to the
+// subquery's own column.
 export async function listProperties(actor: Actor, opts: { q?: string; ownerId?: string; includeArchived?: boolean } = {}) {
   authorise(actor, "records.view");
   return withAgency(actor.ctx, async (tx) => {
@@ -69,8 +72,8 @@ export async function listProperties(actor: Actor, opts: { q?: string; ownerId?:
       .select({
         property: schema.properties,
         ownerName: schema.owners.name,
-        unitCount: sql<number>`(select count(*)::int from ${schema.units} u where u.property_id = ${schema.properties.id} and u.archived_at is null)`,
-        vacantCount: sql<number>`(select count(*)::int from ${schema.units} u where u.property_id = ${schema.properties.id} and u.archived_at is null and u.status = 'vacant')`,
+        unitCount: sql<number>`(select count(*)::int from ${schema.units} u where u.property_id = "properties"."id" and u.archived_at is null)`,
+        vacantCount: sql<number>`(select count(*)::int from ${schema.units} u where u.property_id = "properties"."id" and u.archived_at is null and u.status = 'vacant')`,
       })
       .from(schema.properties)
       .innerJoin(schema.owners, eq(schema.owners.id, schema.properties.ownerId))

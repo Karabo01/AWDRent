@@ -174,3 +174,19 @@ describe("sensitive owner fields", () => {
     await expect(createUnit(adminA, prop, unit("Flat 1"))).rejects.toBeInstanceOf(DuplicateUnitError);
   });
 });
+
+describe("list summaries", () => {
+  it("counts each owner's properties and each property's units correctly", async () => {
+    const o = await createOwner(adminA, owner("Counting Owner"));
+    const p1 = await createProperty(adminA, property(o, "Count One"));
+    const p2 = await createProperty(adminA, property(o, "Count Two"));
+    await createUnit(adminA, p1, unit("A"));
+    await createUnit(adminA, p1, { ...unit("B"), status: "occupied" });
+    await createUnit(adminA, p1, unit("C"));
+    expect((await listOwners(adminA)).find((x) => x.id === o)?.propertyCount).toBe(2);
+    const rows = await listProperties(adminA, { ownerId: o });
+    const byId = Object.fromEntries(rows.map((r) => [r.property.id, [r.unitCount, r.vacantCount]]));
+    expect(byId[p1]).toEqual([3, 2]);
+    expect(byId[p2]).toEqual([0, 0]);
+  });
+});

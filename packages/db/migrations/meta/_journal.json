@@ -78,6 +78,20 @@
       "when": 1791464451508,
       "tag": "0010_owners_properties_units_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791465098559,
+      "tag": "0011_tenants_leases",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791465101801,
+      "tag": "0012_tenants_leases_rls",
+      "breakpoints": true
     }
   ]
 }
