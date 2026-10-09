@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, index, integer, pgEnum, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
 import { agencyColumn, createdBy, pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
+import { inboundEmails } from "./inbox";
 import { leases, tenants } from "./leases";
 import { owners, properties, units } from "./records";
 
@@ -38,6 +39,8 @@ export const documents = pgTable(
     unitId: uuid(),
     tenantId: uuid(),
     leaseId: uuid(),
+    // An emailed proof of payment not yet tied to a lease (D87); moved to the lease once it is
+    inboundEmailId: uuid(),
     kind: documentKind().notNull(),
     // Original name, cleaned for display and download
     filename: text().notNull(),
@@ -57,7 +60,7 @@ export const documents = pgTable(
   (t) => [
     check(
       "documents_exactly_one_subject",
-      sql`num_nonnulls(${t.ownerId}, ${t.propertyId}, ${t.unitId}, ${t.tenantId}, ${t.leaseId}) = 1`,
+      sql`num_nonnulls(${t.ownerId}, ${t.propertyId}, ${t.unitId}, ${t.tenantId}, ${t.leaseId}, ${t.inboundEmailId}) = 1`,
     ),
     check("documents_size_limit", sql`${t.sizeBytes} > 0 and ${t.sizeBytes} <= 10485760`),
     check("documents_file_key_prefix", sql`${t.fileKey} like 'agencies/' || ${t.agencyId}::text || '/%'`),
@@ -68,6 +71,8 @@ export const documents = pgTable(
     index("documents_agency_tenant_idx").on(t.agencyId, t.tenantId),
     index("documents_agency_lease_idx").on(t.agencyId, t.leaseId),
     index("documents_agency_status_idx").on(t.agencyId, t.status),
+    index("documents_agency_inbound_email_idx").on(t.agencyId, t.inboundEmailId),
+    foreignKey({ name: "documents_inbound_email_fk", columns: [t.agencyId, t.inboundEmailId], foreignColumns: [inboundEmails.agencyId, inboundEmails.id] }),
     foreignKey({ name: "documents_owner_fk", columns: [t.agencyId, t.ownerId], foreignColumns: [owners.agencyId, owners.id] }),
     foreignKey({ name: "documents_property_fk", columns: [t.agencyId, t.propertyId], foreignColumns: [properties.agencyId, properties.id] }),
     foreignKey({ name: "documents_unit_fk", columns: [t.agencyId, t.unitId], foreignColumns: [units.agencyId, units.id] }),

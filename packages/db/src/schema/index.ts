@@ -15,3 +15,4 @@ export * from "./receipts";
 export * from "./messages";
 export * from "./portal";
 export * from "./signing";
+export * from "./inbox";
