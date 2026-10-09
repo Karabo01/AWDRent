@@ -12,6 +12,8 @@ import { ForbiddenError } from "../src/permissions";
 import { type Actor, NotFoundError } from "../src/portfolio";
 import { createProperty, createUnit } from "../src/properties";
 import { inviteStaff } from "../src/staff";
+import { cancelBatch, createBatch, listBatches, markBatchPaid, payoutCsv } from "../src/payouts";
+import { updateOwnerBank } from "../src/owners";
 import { approveRun, getRun, prepareRun, StatementError } from "../src/statements";
 import { createTenant } from "../src/tenants";
 
@@ -99,6 +101,19 @@ async function bankPayment(date: string, cents: number, reference: string) {
   return (await listLines(adminA, { importId }))[0]!.line;
 }
 
+const csvProfile = {
+  name: "CSV",
+  dateColumn: "Date",
+  amountMode: "single" as const,
+  amountColumn: "Amount",
+  creditColumn: null,
+  debitColumn: null,
+  referenceColumn: "Reference",
+  descriptionColumn: "Description",
+  dateFormat: "YMD" as const,
+  skipRows: 0,
+};
+
 const statementFor = async (runId: string, ownerId: string) => (await getRun(adminA, runId)).statements.find((s) => s.statement.ownerId === ownerId)!;
 
 beforeAll(async () => {
@@ -116,18 +131,7 @@ beforeAll(async () => {
   await withPlatform((tx) => tx.update(schema.agencies).set({ vatNumber: "4999999999" }).where(eq(schema.agencies.id, a.agency.id)));
   adminA = { ctx: { agencyId: a.agency.id, userId: a.admin.id }, role: "admin", userId: a.admin.id };
   adminB = { ctx: { agencyId: b.agency.id, userId: b.admin.id }, role: "admin", userId: b.admin.id };
-  profileA = await saveProfile(adminA, {
-    name: "CSV",
-    dateColumn: "Date",
-    amountMode: "single",
-    amountColumn: "Amount",
-    creditColumn: null,
-    debitColumn: null,
-    referenceColumn: "Reference",
-    descriptionColumn: "Description",
-    dateFormat: "YMD",
-    skipRows: 0,
-  });
+  profileA = await saveProfile(adminA, { ...csvProfile });
 });
 afterAll(() => closeDb());
 
@@ -175,6 +179,48 @@ describe("owner statements", () => {
     expect(f2.statement).toMatchObject({ rentCents: 850_000, commissionCents: 0, payableCents: 850_000 });
     // The approved month cannot be undone
     await expect(withAgency(adminA.ctx, (tx) => tx.delete(schema.statementRuns).where(eq(schema.statementRuns.id, run1)))).rejects.toThrow();
+  });
+
+  it("pays owners owed money from an approved month, once, by CSV for the bank", async () => {
+    // A fresh agency, so last month is not approved yet
+    const c = await createAgencyWithAdmin("StmtC");
+    const adminC: Actor = { ctx: { agencyId: c.agency.id, userId: c.admin.id }, role: "admin", userId: c.admin.id };
+    const profileC = await saveProfile(adminC, { ...csvProfile });
+    const paid = await ownerWith(adminC, "Paul Payout", "percent", 1000);
+    const noBank = await ownerWith(adminC, "Nina Nobank", "percent", 1000);
+    const feeOnly = await ownerWith(adminC, "Fred Fee", "first_month", null);
+    await updateOwnerBank(adminC, paid, { bankName: "FNB", bankBranchCode: "250655", bankAccountHolder: "P Payout", bankAccountNo: "62123456789" });
+    for (const ownerId of [paid, noBank, feeOnly]) {
+      const l = await leaseFor(adminC, ownerId);
+      const csv = ["Date,Amount,Reference,Description", `${lastMonth.slice(0, 8)}05,8500.00,${l.eftReference},p ${++n}`].join("\n");
+      await importStatement(adminC, { profileId: profileC, fileName: `c${n}.csv`, csv });
+    }
+    const runId = await prepareRun(adminC, lastMonth);
+    await expect(createBatch(adminC, runId)).rejects.toThrow(/Approve the statements/);
+    await approveRun(adminC, runId);
+
+    const { batchId, items, skipped } = await createBatch(adminC, runId);
+    // The first-month owner is owed nothing this month; the owner without bank details is left out
+    expect(items).toBe(1);
+    expect(skipped).toEqual([{ ownerName: "Nina Nobank", reason: "No bank details" }]);
+    await expect(createBatch(adminC, runId)).rejects.toThrow(/Nothing to pay/);
+
+    const { csv, filename } = await payoutCsv(adminC, batchId);
+    expect(filename).toBe(`Owner payouts TT ${lastMonth.slice(0, 7)}.csv`);
+    const [header, row] = csv.trim().split("\r\n");
+    expect(header).toBe("Beneficiary name,Bank,Branch code,Account number,Amount,Beneficiary reference,Own reference");
+    expect(row).toMatch(/^P Payout,FNB,250655,62123456789,7650\.00,TT RENT [A-Z]{3}\d{2},TT OWNER [A-Z]{3}\d{2}$/);
+
+    // Accounts can manage payouts but not see full account numbers (D6)
+    const accId = await inviteStaff(adminC.ctx, { name: "Payout Accounts", email: `pacc-${Date.now()}@c.test`, role: "accounts", phone: null });
+    const accounts: Actor = { ctx: { agencyId: c.agency.id, userId: accId }, role: "accounts", userId: accId };
+    await expect(payoutCsv(accounts, batchId)).rejects.toBeInstanceOf(ForbiddenError);
+    expect((await listBatches(accounts, runId))[0]!.items[0]).toMatchObject({ ownerName: "Paul Payout", amountCents: 765_000, accountNoLast4: "6789" });
+
+    await markBatchPaid(accounts, batchId);
+    await expect(cancelBatch(accounts, batchId)).rejects.toThrow(/cannot be cancelled/);
+    // Another agency cannot see it
+    await expect(payoutCsv(adminA, batchId)).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it("is for admins and accounts, and each agency sees only its own", async () => {
