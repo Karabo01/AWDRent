@@ -90,6 +90,17 @@ const schema = z.object({
   // sent without provider keys (sign-in codes for the end-to-end tests).
   // Refused in production unless APP_BASE_DOMAIN is localhost.
   DEV_OUTBOX_FILE: z.string().optional(),
+
+  // POP inbox (D37): the one AWDRent mailbox, read over IMAP. Agencies
+  // forward their pop@ address to pop+{subdomain}@ this address. Without a
+  // host the inbox is not read.
+  POP_INBOX_ADDRESS: z.string().default("pop@awdrent.co.za"),
+  POP_IMAP_HOST: z.string().optional(),
+  POP_IMAP_PORT: z.coerce.number().int().default(993),
+  POP_IMAP_SECURE: bool.default(true),
+  POP_IMAP_USER: z.string().optional(),
+  POP_IMAP_PASSWORD: z.string().optional(),
+  POP_IMAP_MAILBOX: z.string().default("INBOX"),
 });
 
 export type Env = z.infer<typeof schema>;

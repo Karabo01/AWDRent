@@ -20,10 +20,12 @@
     "@react-pdf/renderer": "^4.9.0",
     "bullmq": "^5.81.5",
     "csv-parse": "^7.0.3",
+    "mailparser": "^3.9.37",
     "react": "^19.3.0",
     "zod": "^4.1.0"
   },
   "devDependencies": {
+    "@types/mailparser": "^3.9.0",
     "@types/react": "^19.3.0"
   }
 }

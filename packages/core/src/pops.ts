@@ -158,8 +158,9 @@ export async function candidateLines(actor: Actor, popId: string): Promise<Candi
       .map((l) => {
         const reasons: string[] = [];
         let score = 0;
+        // The exact amount counts most: older lines with the reference must not crowd out this payment
         if (l.amountCents === pop.pop.claimedCents) {
-          score += 3;
+          score += 8;
           reasons.push("same amount");
         }
         if (`${l.reference} ${l.description ?? ""}`.replace(/[^A-Z0-9]/gi, "").toUpperCase().includes(eftCompact)) {

@@ -150,6 +150,18 @@ describe("proofs of payment", () => {
     expect((await getLedger(adminA, l.id)).balanceCents).toBe(0);
   });
 
+  it("ranks a line with the exact amount above earlier lines that carry the reference", async () => {
+    const l = await lease(adminA);
+    // Small payments with the reference this week, already matched to the lease
+    await bankLines([
+      ["100.00", l.eftReference],
+      ["100.01", `${l.eftReference} again`],
+    ]);
+    const { popId } = await submit(accountsA, l.id, 432_100);
+    const lines = await bankLines([["4321.00", "MS NKOSI"]]);
+    expect((await candidateLines(accountsA, popId))[0]?.id).toBe(lines["MS NKOSI"]!.id);
+  });
+
   it("links to a line already auto-matched to the lease without paying twice", async () => {
     const l = await lease(adminA);
     const lines = await bankLines([["5000.00", l.eftReference]]);

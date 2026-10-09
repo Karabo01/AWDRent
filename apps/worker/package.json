@@ -13,7 +13,8 @@
     "@awdrent/config": "*",
     "@awdrent/core": "*",
     "@awdrent/db": "*",
-    "bullmq": "^5.61.0"
+    "bullmq": "^5.61.0",
+    "imapflow": "^2.3.0"
   },
   "devDependencies": {
     "tsup": "^8.5.0"

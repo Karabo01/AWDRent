@@ -214,7 +214,9 @@ export async function documentDownloadUrl(actor: Actor, documentId: string): Pro
       .from(schema.documents)
       .where(and(eq(schema.documents.id, documentId), isNull(schema.documents.deletedAt)));
     if (!d) throw new NotFoundError("Document");
-    await assertSubjectInScope(tx, actor, subjectOf(d));
+    // An emailed file not yet tied to a lease: only those who handle POPs (D87)
+    if (d.inboundEmailId) authorise(actor, "payments.approve");
+    else await assertSubjectInScope(tx, actor, subjectOf(d));
     if (d.status !== "clean") throw new NotFoundError("Document");
     await audit(tx, { action: "document.downloaded", entity: "document", entityId: d.id });
     return d;
