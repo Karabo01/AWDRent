@@ -240,3 +240,12 @@ Steps: owner statements, owner payouts, maintenance, owner portal, tenant onboar
 | D111 | Expiry and reminders | Links last 14 days by default (agency setting). One reminder 3 days after the invitation if not submitted (application_reminder, by SMS). The worker expires links daily at 03:00. |
 | D112 | Deleting what does not proceed | Declined, revoked and expired applications have their files deleted (storage and record) and their contact details, ID number, employer and address erased after the retention period (90 days by default, agency setting); the name and outcome stay for the record, and the deletion is audited. |
 | D113 | Messages to applicants | Sent by email and SMS where the applicant gave them, regardless of opt-ins (they asked to apply); the internal decline reason is never sent. |
+
+## 2026-10-09 — Reports and exports (Phase 3, step 6)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D114 | Arrears ageing | What is past its due date and unpaid after oldest-first allocation (D34), per lease, in 1–30, 31–60, 61–90 and over-90-day buckets by the charge's due date. Ended leases with arrears are included. |
+| D115 | Collections | For the month: charges due in it against money received in it (bank lines, proofs of payment, manual payments; not opening balances or deposits applied). Occupancy counts units by status (occupied and notice given count as let). Leases ending: fixed-term leases ending in the next 90 days, grouped by 30/60/90. |
+| D116 | Exports | General CSV (D98 approach) for admins and accounts: transactions (charges and payments) for a date range, receipts, approved owner statement lines, and arrears ageing at a date. At most a year per file; every download audited; formula injection guarded; UTF-8 with a byte-order mark for Excel. Package-specific layouts (Sage, Xero) once the agency's package is known. |
+| D117 | Who sees reports | Admins and accounts see the whole agency; agents see their portfolio and cannot export. |

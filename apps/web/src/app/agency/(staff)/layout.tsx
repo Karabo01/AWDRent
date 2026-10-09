@@ -15,6 +15,7 @@ const NAV: (NavItem & { needs?: Action })[] = [
   { href: "/applications", label: "Applications", needs: "applications.manage" },
   { href: "/maintenance", label: "Maintenance", needs: "maintenance.manage" },
   { href: "/statements", label: "Owner statements", needs: "statements.manage" },
+  { href: "/reports", label: "Reports", needs: "reports.view" },
   { href: "/messages", label: "Messages", needs: "messages.view" },
   { href: "/import", label: "Import", needs: "import.run" },
   { href: "/staff", label: "Staff", needs: "staff.manage" },
