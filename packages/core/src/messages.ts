@@ -48,7 +48,8 @@ export type Recipient =
   | TenantRecipient
   | { kind: "owner"; ownerId: string }
   | { kind: "staff"; userId: string }
-  | { kind: "contractor"; contractorId: string };
+  | { kind: "contractor"; contractorId: string }
+  | { kind: "applicant"; applicationId: string };
 
 interface ResolvedRecipient {
   kind: Recipient["kind"];
@@ -66,6 +67,27 @@ async function resolve(tx: Tx, recipient: Recipient, agency: Agency, transaction
     const [o] = await tx.select().from(schema.owners).where(eq(schema.owners.id, recipient.ownerId));
     if (!o) throw new NotFoundError("Owner");
     return { kind: "owner", id: o.id, fullName: o.name, channels: ["email"], address: emailOnly(o.email), optOutLink: null };
+  }
+  if (recipient.kind === "applicant") {
+    // Messages about an application the person asked to make: email and SMS where we have them (D113)
+    const [app] = await tx.select().from(schema.applications).where(eq(schema.applications.id, recipient.applicationId));
+    if (!app) throw new NotFoundError("Application");
+    const msisdn = toMsisdn(app.phone);
+    return {
+      kind: "applicant",
+      id: app.id,
+      fullName: app.fullName,
+      channels: LIVE_CHANNELS,
+      address: (channel) =>
+        channel === "email"
+          ? app.email
+            ? { to: app.email, reason: null }
+            : { to: "", reason: "No email address" }
+          : msisdn
+            ? { to: msisdn, reason: null }
+            : { to: app.phone ?? "", reason: app.phone ? "Phone number cannot receive SMS" : "No phone number" },
+      optOutLink: null,
+    };
   }
   if (recipient.kind === "contractor") {
     const [c] = await tx.select().from(schema.contractors).where(eq(schema.contractors.id, recipient.contractorId));
@@ -193,8 +215,8 @@ export async function send(
   const batchId = randomUUID();
   const notBefore = outsideQuietHours(input.now ?? new Date(), agency.quietHoursStart, agency.quietHoursEnd);
   const wanted = entry.channels.filter((c): c is SendChannel => LIVE_CHANNELS.includes(c as SendChannel));
-  // Owners and staff get the email even when the message is SMS-only for tenants
-  const channels = to.kind === "tenant" ? wanted : to.channels;
+  // Owners, staff and contractors get the email even when the message is SMS-only for tenants
+  const channels = to.kind === "tenant" || to.kind === "applicant" ? wanted : to.channels;
   for (const channel of channels) {
     const { to: toAddress, reason } = to.address(channel);
     let { subject, body } = rendered(channel, entry, custom.get(channel), vars);

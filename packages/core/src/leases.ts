@@ -314,7 +314,17 @@ export async function createLease(actor: Actor, input: LeaseCreateInput): Promis
   return runLeaseChange(actor, async (tx) => {
     await assertUnitInScope(tx, actor, input.unitId);
     for (const tenantId of [input.primaryTenantId, ...coTenants]) await assertTenantInScope(tx, actor, tenantId);
-    const eftReference = await nextEftReference(tx, actor.ctx.agencyId);
+    return createDraftLeaseInTx(tx, actor.ctx.agencyId, input, coTenants);
+  });
+}
+
+/**
+ * Inserts a draft lease with a new EFT reference, for a caller that has
+ * checked access (createLease above; approving an application, D110).
+ */
+export async function createDraftLeaseInTx(tx: Tx, agencyId: string, input: LeaseCreateInput, coTenants: string[] = []): Promise<{ id: string; eftReference: string }> {
+  {
+    const eftReference = await nextEftReference(tx, agencyId);
     const [lease] = await tx
       .insert(schema.leases)
       .values({
@@ -340,7 +350,7 @@ export async function createLease(actor: Actor, input: LeaseCreateInput): Promis
     ]);
     await recordEvent(tx, lease, "created", lease.startDate, null, null, lease);
     return { id: lease.id, eftReference };
-  });
+  }
 }
 
 export async function activateLease(actor: Actor, leaseId: string): Promise<void> {

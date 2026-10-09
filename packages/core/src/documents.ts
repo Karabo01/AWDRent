@@ -22,7 +22,7 @@ import { deleteObject, MAX_UPLOAD_BYTES, promote, putQuarantined, readObject, si
 // the worker, then moved to files/. Downloads only for clean files, through
 // a 5-minute signed link, after a portfolio-scoped lookup.
 
-export const SUBJECT_TYPES = ["owner", "property", "unit", "tenant", "lease", "maintenance_request"] as const;
+export const SUBJECT_TYPES = ["owner", "property", "unit", "tenant", "lease", "maintenance_request", "application"] as const;
 export type SubjectType = (typeof SUBJECT_TYPES)[number];
 export const subjectSchema = z.object({ type: z.enum(SUBJECT_TYPES), id: z.uuid() });
 export type Subject = z.infer<typeof subjectSchema>;
@@ -39,6 +39,7 @@ const SUBJECT_COLUMN = {
   tenant: schema.documents.tenantId,
   lease: schema.documents.leaseId,
   maintenance_request: schema.documents.maintenanceRequestId,
+  application: schema.documents.applicationId,
 } as const;
 
 const SUBJECT_KEY = {
@@ -48,6 +49,7 @@ const SUBJECT_KEY = {
   tenant: "tenantId",
   lease: "leaseId",
   maintenance_request: "maintenanceRequestId",
+  application: "applicationId",
 } as const;
 
 async function assertSubjectInScope(tx: Tx, actor: Actor, subject: Subject): Promise<void> {
@@ -63,6 +65,13 @@ async function assertSubjectInScope(tx: Tx, actor: Actor, subject: Subject): Pro
       return assertTenantInScope(tx, actor, subject.id);
     case "lease":
       return assertLeaseInScope(tx, actor, subject.id);
+    case "application": {
+      // In scope when its unit is
+      const [app] = await tx.select({ unitId: schema.applications.unitId }).from(schema.applications).where(eq(schema.applications.id, subject.id));
+      if (!app) throw new NotFoundError("Application");
+      await assertUnitInScope(tx, actor, app.unitId);
+      return;
+    }
     case "maintenance_request": {
       // In scope when its unit is
       const [r] = await tx.select({ unitId: schema.maintenanceRequests.unitId }).from(schema.maintenanceRequests).where(eq(schema.maintenanceRequests.id, subject.id));

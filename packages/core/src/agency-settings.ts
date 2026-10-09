@@ -38,6 +38,9 @@ export const agencySettingsSchema = z.object({
     .default("")
     .refine((s) => s === "" || /^\d{6}$/.test(s), "Six digits, e.g. 250655")
     .transform((s) => s || null),
+  // Tenant onboarding (D111, D112); optional so older callers keep their values
+  applicationLinkDays: z.coerce.number().int().min(1, "At least 1 day").max(60, "At most 60 days").optional(),
+  applicationRetentionDays: z.coerce.number().int().min(30, "At least 30 days").max(365, "At most 365 days").optional(),
   quietHoursStart: time,
   quietHoursEnd: time,
   // Business details printed on receipts, statements and letters (D60)
@@ -73,6 +76,8 @@ export async function getAgencySettings(ctx: AgencyContext) {
       smsSenderName: a.smsSenderName,
       quietHoursStart: a.quietHoursStart.slice(0, 5),
       quietHoursEnd: a.quietHoursEnd.slice(0, 5),
+      applicationLinkDays: a.applicationLinkDays,
+      applicationRetentionDays: a.applicationRetentionDays,
       plan: a.plan,
       legalName: a.legalName,
       registrationNo: a.registrationNo,
@@ -97,6 +102,8 @@ export async function updateAgencySettings(ctx: AgencyContext, input: AgencySett
       trustBranchCode: input.trustBranchCode,
       quietHoursStart: input.quietHoursStart,
       quietHoursEnd: input.quietHoursEnd,
+      ...(input.applicationLinkDays ? { applicationLinkDays: input.applicationLinkDays } : {}),
+      ...(input.applicationRetentionDays ? { applicationRetentionDays: input.applicationRetentionDays } : {}),
       legalName: input.legalName,
       registrationNo: input.registrationNo,
       ffcNumber: input.ffcNumber,
