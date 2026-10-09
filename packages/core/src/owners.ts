@@ -92,6 +92,7 @@ function present(o: typeof schema.owners.$inferSelect) {
     bankAccountNoLast4: o.bankAccountNoLast4,
     commissionModel: o.commissionModel,
     commissionBps: o.commissionBps,
+    portalEnabled: o.portalEnabled,
     vatRegistered: o.vatRegistered,
     vatNumber: o.vatNumber,
     notes: o.notes,
@@ -263,4 +264,23 @@ export async function findOwnersByIdNumber(actor: Actor, idOrRegNo: string) {
       .from(schema.owners)
       .where(eq(schema.owners.idOrRegNoBlindIndex, index)),
   );
+}
+
+export class OwnerPortalError extends Error {}
+
+/**
+ * Switches an owner's portal access on or off (D104). Turning it off ends
+ * access at once: every portal request re-checks it.
+ */
+export async function setOwnerPortal(actor: Actor, ownerId: string, enabled: boolean): Promise<void> {
+  authorise(actor, "records.edit");
+  await withAgency(actor.ctx, async (tx) => {
+    await assertOwnerInScope(tx, actor, ownerId);
+    const [o] = await tx.select({ email: schema.owners.email, phone: schema.owners.phone, enabled: schema.owners.portalEnabled }).from(schema.owners).where(eq(schema.owners.id, ownerId));
+    if (!o) throw new NotFoundError("Owner");
+    if (enabled && !o.email && !o.phone) throw new OwnerPortalError("Add the owner's email address or mobile number first: the sign-in code is sent there.");
+    if (o.enabled === enabled) return;
+    await tx.update(schema.owners).set({ portalEnabled: enabled }).where(eq(schema.owners.id, ownerId));
+    await audit(tx, { action: enabled ? "owner.portal_enabled" : "owner.portal_disabled", entity: "owner", entityId: ownerId });
+  });
 }

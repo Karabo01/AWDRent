@@ -145,8 +145,8 @@ describe("finding who signs in", () => {
     const email = `t${Date.now()}@example.test`;
     const id = await tenant(adminA, { email, phone: "071 555 0001" });
     await leaseFor(adminA, id);
-    expect(await findSignInTarget(a.agency.id, parseSignInIdentifier(email.toUpperCase())!)).toMatchObject({ tenantId: id, channel: "email", to: email });
-    expect(await findSignInTarget(a.agency.id, parseSignInIdentifier("+27 71 555 0001")!)).toMatchObject({ tenantId: id, channel: "sms", to: "27715550001" });
+    expect(await findSignInTarget(a.agency.id, parseSignInIdentifier(email.toUpperCase())!)).toMatchObject({ kind: "tenant", partyId: id, channel: "email", to: email });
+    expect(await findSignInTarget(a.agency.id, parseSignInIdentifier("+27 71 555 0001")!)).toMatchObject({ kind: "tenant", partyId: id, channel: "sms", to: "27715550001" });
     // The same address at another agency finds nothing here
     expect(await findSignInTarget(b.agency.id, parseSignInIdentifier(email)!)).toBeNull();
   });

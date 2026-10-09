@@ -41,8 +41,12 @@ export function parseSignInIdentifier(raw: string): SignInIdentifier | null {
   return msisdn ? { kind: "phone", value: msisdn } : null;
 }
 
+export type Audience = "tenant" | "owner";
+
 export interface SignInTarget {
-  tenantId: string;
+  kind: Audience;
+  /** tenants.id or owners.id */
+  partyId: string;
   name: string;
   channel: "email" | "sms";
   to: string;
@@ -63,10 +67,17 @@ function eligible(tx: Tx, where: SQL) {
  * Null when there is none, or when several tenant records share it: the code
  * must never open someone else's account (D76).
  */
-export async function findSignInTarget(agencyId: string, id: SignInIdentifier): Promise<SignInTarget | null> {
+export async function findSignInTarget(agencyId: string, id: SignInIdentifier, audience: Audience = "tenant"): Promise<SignInTarget | null> {
   return withAgency({ agencyId, readOnly: true }, async (tx) => {
     let matches: { id: string; name: string; email: string | null; phone: string | null }[];
-    if (id.kind === "email") {
+    if (audience === "owner") {
+      // Owners whose portal staff have switched on (D104)
+      const owners = await tx
+        .select({ id: schema.owners.id, name: schema.owners.name, email: schema.owners.email, phone: schema.owners.phone })
+        .from(schema.owners)
+        .where(and(isNull(schema.owners.archivedAt), eq(schema.owners.portalEnabled, true)));
+      matches = owners.filter((o) => (id.kind === "email" ? o.email?.toLowerCase() === id.value : toMsisdn(o.phone) === id.value));
+    } else if (id.kind === "email") {
       const like = id.value.replace(/[%_\\]/g, "\\$&");
       matches = await eligible(tx, ilike(schema.tenants.email, like));
     } else {
@@ -75,7 +86,7 @@ export async function findSignInTarget(agencyId: string, id: SignInIdentifier): 
     }
     if (matches.length !== 1) return null;
     const t = matches[0]!;
-    return { tenantId: t.id, name: t.name, channel: id.kind === "email" ? "email" : "sms", to: id.kind === "email" ? t.email! : id.value };
+    return { kind: audience, partyId: t.id, name: t.name, channel: id.kind === "email" ? "email" : "sms", to: id.kind === "email" ? t.email! : id.value };
   });
 }
 
@@ -121,8 +132,8 @@ export async function sendSignInCode(agencyId: string, target: SignInTarget, cod
       batchId: messageId,
       templateKey: "portal_sign_in_code",
       channel: target.channel,
-      recipientKind: "tenant",
-      recipientId: target.tenantId,
+      recipientKind: target.kind,
+      recipientId: target.partyId,
       recipientName: target.name,
       toAddress: target.to,
       subject: target.channel === "email" ? subject : null,
@@ -158,7 +169,30 @@ export async function ensurePortalUser(agencyId: string, tenantId: string): Prom
   });
 }
 
-/** The portal session's tenant, re-checked on every request: still allowed in? */
+/** The portal user for an owner whose portal is on, created on first sign-in (D104). */
+export async function ensureOwnerPortalUser(agencyId: string, ownerId: string): Promise<string> {
+  return withAgency({ agencyId }, async (tx) => {
+    const [o] = await tx
+      .select()
+      .from(schema.owners)
+      .where(and(eq(schema.owners.id, ownerId), isNull(schema.owners.archivedAt), eq(schema.owners.portalEnabled, true)));
+    if (!o) throw new NotFoundError("Owner");
+    const email = o.email ?? `${ownerId}@portal.invalid`;
+    const [user] = await tx
+      .insert(schema.portalUsers)
+      .values({ ownerId, name: o.name, email, lastLoginAt: sql`now()` })
+      .onConflictDoUpdate({ target: [schema.portalUsers.agencyId, schema.portalUsers.ownerId], set: { name: o.name, email, lastLoginAt: sql`now()` } })
+      .returning();
+    if (!user!.active) throw new NotFoundError("Owner");
+    await audit(tx, { action: "portal.signed_in", entity: "owner", entityId: ownerId });
+    return user!.id;
+  });
+}
+
+/**
+ * The portal session's tenant, re-checked on every request: still allowed
+ * in? Null for an owner's login (see portalOwner).
+ */
 export async function portalUser(agencyId: string, portalUserId: string) {
   return withAgency({ agencyId, portalUserId, readOnly: true }, async (tx) => {
     const [row] = await tx
@@ -166,6 +200,20 @@ export async function portalUser(agencyId: string, portalUserId: string) {
       .from(schema.portalUsers)
       .innerJoin(schema.tenants, eq(schema.tenants.id, schema.portalUsers.tenantId))
       .where(and(eq(schema.portalUsers.id, portalUserId), eq(schema.portalUsers.active, true), isNull(schema.tenants.archivedAt)));
+    return row ?? null;
+  });
+}
+
+/** The owner behind a portal session, if their portal is still switched on. */
+export async function portalOwner(agencyId: string, portalUserId: string) {
+  return withAgency({ agencyId, portalUserId, readOnly: true }, async (tx) => {
+    const [row] = await tx
+      .select({ user: schema.portalUsers, owner: schema.owners })
+      .from(schema.portalUsers)
+      .innerJoin(schema.owners, eq(schema.owners.id, schema.portalUsers.ownerId))
+      .where(
+        and(eq(schema.portalUsers.id, portalUserId), eq(schema.portalUsers.active, true), isNull(schema.owners.archivedAt), eq(schema.owners.portalEnabled, true)),
+      );
     return row ?? null;
   });
 }
