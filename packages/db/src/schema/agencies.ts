@@ -36,6 +36,10 @@ export const agencies = pgTable(
     physicalAddress: text(),
     contactPhone: text(),
     contactEmail: text(),
+    // Tenant onboarding (D111, D112): how long an application link lasts, and
+    // how long documents of applications that did not proceed are kept
+    applicationLinkDays: integer().notNull().default(14),
+    applicationRetentionDays: integer().notNull().default(90),
     quietHoursStart: time().notNull().default("20:00"),
     quietHoursEnd: time().notNull().default("07:00"),
     plan: text().notNull().default("standard"),

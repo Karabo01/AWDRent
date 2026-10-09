@@ -19,3 +19,4 @@ export * from "./inbox";
 export * from "./statements";
 export * from "./payouts";
 export * from "./maintenance";
+export * from "./onboarding";
