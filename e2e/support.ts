@@ -70,3 +70,17 @@ export function lastMessageTo(to: string, after: Date): { text: string; subject?
   }
   return null;
 }
+
+/** Signs in to the tenant portal with a code read from the dev outbox file. */
+export async function signInToPortal(page: Page, subdomain: string, identifier: string, to = identifier): Promise<void> {
+  const since = new Date(Date.now() - 1000);
+  await page.goto(hostUrl(subdomain, "/p/login"));
+  await page.getByLabel("Email address or mobile number").fill(identifier);
+  await page.getByRole("button", { name: "Send me a code" }).click();
+  await expect(page.getByRole("status")).toContainText("we have sent a 6-digit code", { timeout: 30_000 });
+  let code: string | undefined;
+  await expect.poll(() => (code = lastMessageTo(to, since)?.text.match(/\b(\d{6})\b/)?.[1])).toBeTruthy();
+  await page.getByLabel("Code").fill(code!);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { name: /^Hi / })).toBeVisible({ timeout: 30_000 });
+}

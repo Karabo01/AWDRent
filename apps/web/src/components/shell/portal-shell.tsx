@@ -17,6 +17,7 @@ export function PortalShell({
   const nav = [
     { href: "/p", label: "My rent" },
     { href: "/p/pay", label: "How to pay" },
+    { href: "/p/maintenance", label: "Maintenance" },
     { href: "/p/messages", label: "Messages" },
   ];
   return (

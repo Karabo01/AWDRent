@@ -211,3 +211,12 @@ Steps: owner statements, owner payouts, maintenance, owner portal, tenant onboar
 | D97 | Payout batches | From an approved month, accounts make a batch of every statement owed money (payable above zero) that is not in a batch yet; owners without bank details are left out and named. A statement is paid at most once (unique). Each item keeps the bank details it was made with, the account number re-encrypted, so the file can be produced again unchanged. A batch can be cancelled until it is marked paid; then it is final (database trigger). |
 | D98 | The bank file | A general CSV for now (D36 approach): beneficiary name, bank, branch code, account number, amount in rand, beneficiary reference "{PREFIX} RENT OCT26", own reference "{PREFIX} OWNER OCT26". Bank-specific layouts can be added once the agencies' banks are known. Values are guarded against spreadsheet formula injection. |
 | D99 | Who does what | Accounts and admins make batches and mark them paid; only admins download the file, because it holds full account numbers (D6). Every download is audited. |
+
+## 2026-10-09 — Maintenance (Phase 3, step 3)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D100 | Requests | Tenants log a request in the portal for a unit on a current lease (with up to 5 photos, virus-scanned); staff can log one for any unit in their portfolio. The portfolio agent is emailed (admins if the property has none). Priorities: low, normal, urgent, emergency. Statuses: logged, contractor assigned, in progress, completed, cancelled. What was reported is fixed; the timeline of updates is append-only. Each request has a short job reference (M-1A2B3C). |
+| D101 | Who sees what | Admins and the portfolio agents manage requests (accounts do not). The tenant sees their requests and the updates marked for them; status changes always reach them (maintenance_update), internal notes do not. |
+| D102 | Contractors | An agency list (name, trade, email, phone). Assigning one emails a job card with the address, details, priority, the tenant's name and phone so they can arrange access, and the agent to confirm with. The standard lease's personal-information clause now says so. |
+| D103 | Costs | Not recorded: owners pay contractors directly (D93). |
