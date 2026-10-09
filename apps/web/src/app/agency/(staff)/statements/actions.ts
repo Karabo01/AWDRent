@@ -1,5 +1,6 @@
 "use server";
 
+import { cancelBatch, createBatch, markBatchPaid, PayoutError } from "@awdrent/core/payouts";
 import { approveRun, issueStatements, prepareRun, setLettingFee, StatementError } from "@awdrent/core/statements";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -56,4 +57,33 @@ export async function setLettingFeeAction(leaseId: string, applies: boolean, _pr
   if (failed) return failed;
   revalidatePath(`/leases/${leaseId}`);
   return { ok: true };
+}
+
+export async function createBatchAction(runId: string, _prev: FormState): Promise<FormState> {
+  const s = await requireCan("statements.manage");
+  const blocked = writeGuard(s);
+  if (blocked) return blocked;
+  let skipped: { ownerName: string; reason: string }[] = [];
+  try {
+    const failed = await mutate(async () => {
+      skipped = (await createBatch(actorOf(s), z.uuid().parse(runId))).skipped;
+    });
+    if (failed) return failed;
+  } catch (err) {
+    if (err instanceof PayoutError) return { error: err.message };
+    throw err;
+  }
+  revalidatePath(`/statements/${runId}`);
+  return skipped.length ? { error: `Left out: ${skipped.map((x) => `${x.ownerName} (${x.reason.toLowerCase()})`).join(", ")}. Add their bank details, then make another batch.` } : { ok: true };
+}
+
+export async function batchStatusAction(runId: string, batchId: string, change: "paid" | "cancel"): Promise<void> {
+  const s = await requireCan("statements.manage");
+  if (s.ctx.readOnly) return;
+  try {
+    await mutate(() => (change === "paid" ? markBatchPaid : cancelBatch)(actorOf(s), z.uuid().parse(batchId)));
+  } catch (err) {
+    if (!(err instanceof PayoutError)) throw err;
+  }
+  revalidatePath(`/statements/${runId}`);
 }

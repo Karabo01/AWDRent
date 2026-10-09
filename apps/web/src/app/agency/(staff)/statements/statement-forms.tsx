@@ -5,7 +5,7 @@ import { FormMessage } from "@/components/form/fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { approveRunAction, prepareRunAction, setLettingFeeAction } from "./actions";
+import { approveRunAction, createBatchAction, prepareRunAction, setLettingFeeAction } from "./actions";
 
 export function PrepareRunForm({ defaultMonth, maxMonth, label = "Prepare statements" }: { defaultMonth: string; maxMonth: string; label?: string }) {
   const [state, action, pending] = useActionState(prepareRunAction, {});
@@ -51,6 +51,22 @@ export function LettingFeeToggle({ leaseId, applies }: { leaseId: string; applie
         {applies ? "Do not take the letting fee on this lease" : "Take the letting fee on this lease"}
       </button>
       {state.error ? <span className="text-xs text-destructive">{state.error}</span> : null}
+    </form>
+  );
+}
+
+export function CreateBatchForm({ runId }: { runId: string }) {
+  const [state, action, pending] = useActionState(createBatchAction.bind(null, runId), {});
+  return (
+    <form action={action} className="grid gap-2">
+      <Button type="submit" disabled={pending}>
+        Make a payout batch
+      </Button>
+      {state.error ? (
+        <p role="alert" className="text-sm text-amber-800">
+          {state.error}
+        </p>
+      ) : null}
     </form>
   );
 }

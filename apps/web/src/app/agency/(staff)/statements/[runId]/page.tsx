@@ -1,4 +1,6 @@
 import { formatCents } from "@awdrent/core/money";
+import { can } from "@awdrent/core/permissions";
+import { listBatches } from "@awdrent/core/payouts";
 import { getRun, periodLabel } from "@awdrent/core/statements";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { actorOf, load } from "@/server/actor";
 import { requireCan } from "@/server/session";
-import { issueMissingAction } from "../actions";
-import { ApproveRunForm, PrepareRunForm } from "../statement-forms";
+import { batchStatusAction, issueMissingAction } from "../actions";
+import { ApproveRunForm, CreateBatchForm, PrepareRunForm } from "../statement-forms";
 
 export const metadata = { title: "Owner statements" };
 
@@ -24,6 +26,10 @@ export default async function StatementRunPage({ params }: { params: Promise<{ r
   const draft = run.status === "draft";
   const total = (pick: (x: (typeof statements)[number]["statement"]) => number) => statements.reduce((sum, x) => sum + pick(x.statement), 0);
   const unissued = statements.filter((x) => !x.statement.documentId).length;
+  const batches = draft ? [] : await load(() => listBatches(actorOf(s), run.id));
+  const inBatch = new Set(batches.flatMap((b) => b.items.map((i) => i.statementId)));
+  const unpaid = statements.filter((x) => x.statement.payableCents > 0 && !inBatch.has(x.statement.id)).length;
+  const canDownload = can(s.user.role, "owner.bank.view");
   return (
     <>
       <PageHeader
@@ -124,6 +130,56 @@ export default async function StatementRunPage({ params }: { params: Promise<{ r
           </form>
         ) : null}
       </div>
+      {!draft ? (
+        <section className="mt-10 grid gap-4" data-testid="payouts">
+          <h2 className="text-lg font-semibold">Payouts</h2>
+          <p className="text-sm text-muted-foreground">
+            A batch pays every owner owed money this month who is not in a batch yet. Download it as a CSV for your bank&apos;s bulk-payment
+            import (admins only: it holds full account numbers), then mark it paid once the bank has processed it.
+          </p>
+          {unpaid > 0 ? <CreateBatchForm runId={run.id} /> : <p className="text-sm">Every owner owed money is in a batch.</p>}
+          {batches.map((b) => (
+            <div key={b.id} className="grid gap-2 rounded-md border p-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-medium">
+                  {b.items.length} owner{b.items.length === 1 ? "" : "s"} · {formatCents(b.totalCents)} · made {when.format(b.createdAt)}
+                </span>
+                <Badge variant={b.status === "paid" ? "default" : "secondary"}>{b.status === "paid" ? `Paid ${when.format(b.paidAt!)}` : "Not paid yet"}</Badge>
+              </div>
+              <ul className="grid gap-1">
+                {b.items.map((i) => (
+                  <li key={i.id}>
+                    {i.ownerName}: {formatCents(i.amountCents)} to {i.bankName} ••••{i.accountNoLast4}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex flex-wrap items-center gap-4">
+                {canDownload ? (
+                  <a href={`/statements/payouts/${b.id}/csv`} className="underline" data-testid="payout-csv">
+                    Download CSV for the bank
+                  </a>
+                ) : (
+                  <span className="text-muted-foreground">An admin downloads the CSV.</span>
+                )}
+                {b.status !== "paid" ? (
+                  <>
+                    <form action={batchStatusAction.bind(null, run.id, b.id, "paid")}>
+                      <Button type="submit" size="sm" variant="outline">
+                        Mark as paid
+                      </Button>
+                    </form>
+                    <form action={batchStatusAction.bind(null, run.id, b.id, "cancel")}>
+                      <button type="submit" className="text-xs text-muted-foreground underline">
+                        Cancel batch
+                      </button>
+                    </form>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : null}
     </>
   );
 }

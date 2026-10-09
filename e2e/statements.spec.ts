@@ -40,3 +40,24 @@ test.describe("owner statements as agent", () => {
     expect(await statusOf(page, "/statements")).toBe(404);
   });
 });
+
+test.describe("owner payouts", () => {
+  test.use({ storageState: STATE.kgosiAdmin });
+
+  test("an admin makes a payout batch from an approved month and downloads the bank file", async ({ page }) => {
+    await page.goto(hostUrl(KGOSI.subdomain, "/statements"));
+    const approved = page.getByTestId("statement-runs").locator("tbody tr").filter({ hasText: "Approved" }).first();
+    test.skip((await approved.count()) === 0, "No approved month yet (the statements test approves one)");
+    await approved.getByRole("link").click();
+    const payouts = page.getByTestId("payouts");
+    await expect(payouts).toBeVisible({ timeout: 30_000 });
+    const make = payouts.getByRole("button", { name: "Make a payout batch" });
+    if (await make.isVisible()) await make.click();
+    // With no owner owed money (or no bank details) there is no batch to download
+    const csv = payouts.getByTestId("payout-csv").first();
+    if (await csv.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      const href = (await csv.getAttribute("href"))!;
+      expect(await statusOf(page, href)).toBe(200);
+    }
+  });
+});

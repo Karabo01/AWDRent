@@ -203,3 +203,11 @@ Steps: owner statements, owner payouts, maintenance, owner portal, tenant onboar
 | D94 | VAT | When the agency is VAT-registered (it has a VAT number in Settings): the letting fee includes VAT, so the agency keeps exactly one month's rent and the statement shows the VAT inside it; a percentage commission has 15% VAT added. |
 | D95 | Months and carrying forward | Statements cover calendar months and are prepared by accounts after the month ends; a draft can be prepared again as often as needed and is final once approved (database triggers). Each statement pays the rent that reached the trust account since the last approved one: payments dated in the month, against rent due by its end. A payment that arrives late, or one reversed after it was paid out, appears on the next statement, with the commission reversed too. A negative result is carried forward as a shortfall. Months must be approved in order. |
 | D96 | Issuing | Approving files each owner's branded PDF with the owner and emails it (owner_statement, with the PDF). If any could not be sent, the month shows how many, with a button to send them. Admins and accounts manage statements. |
+
+## 2026-10-09 — Owner payouts (Phase 3, step 2)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D97 | Payout batches | From an approved month, accounts make a batch of every statement owed money (payable above zero) that is not in a batch yet; owners without bank details are left out and named. A statement is paid at most once (unique). Each item keeps the bank details it was made with, the account number re-encrypted, so the file can be produced again unchanged. A batch can be cancelled until it is marked paid; then it is final (database trigger). |
+| D98 | The bank file | A general CSV for now (D36 approach): beneficiary name, bank, branch code, account number, amount in rand, beneficiary reference "{PREFIX} RENT OCT26", own reference "{PREFIX} OWNER OCT26". Bank-specific layouts can be added once the agencies' banks are known. Values are guarded against spreadsheet formula injection. |
+| D99 | Who does what | Accounts and admins make batches and mark them paid; only admins download the file, because it holds full account numbers (D6). Every download is audited. |
