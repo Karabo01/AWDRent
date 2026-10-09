@@ -73,7 +73,7 @@ export const messages = pgTable(
     index("messages_agency_created_idx").on(t.agencyId, t.createdAt),
     index("messages_agency_lease_idx").on(t.agencyId, t.leaseId),
     index("messages_agency_batch_idx").on(t.agencyId, t.batchId),
-    check("messages_recipient_kind", sql`${t.recipientKind} IN ('tenant', 'owner', 'staff', 'applicant')`),
+    check("messages_recipient_kind", sql`${t.recipientKind} IN ('tenant', 'owner', 'staff', 'applicant', 'contractor')`),
     foreignKey({ name: "messages_lease_fk", columns: [t.agencyId, t.leaseId], foreignColumns: [leases.agencyId, leases.id] }),
     foreignKey({
       name: "messages_attachment_fk",

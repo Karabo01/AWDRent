@@ -302,6 +302,20 @@
       "when": 1791550731583,
       "tag": "0042_payouts_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791551186072,
+      "tag": "0043_maintenance",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791551189919,
+      "tag": "0044_maintenance_rls",
+      "breakpoints": true
     }
   ]
 }

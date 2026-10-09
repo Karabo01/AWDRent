@@ -18,3 +18,4 @@ export * from "./signing";
 export * from "./inbox";
 export * from "./statements";
 export * from "./payouts";
+export * from "./maintenance";
