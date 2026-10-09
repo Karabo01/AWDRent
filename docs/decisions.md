@@ -249,3 +249,12 @@ Steps: owner statements, owner payouts, maintenance, owner portal, tenant onboar
 | D115 | Collections | For the month: charges due in it against money received in it (bank lines, proofs of payment, manual payments; not opening balances or deposits applied). Occupancy counts units by status (occupied and notice given count as let). Leases ending: fixed-term leases ending in the next 90 days, grouped by 30/60/90. |
 | D116 | Exports | General CSV (D98 approach) for admins and accounts: transactions (charges and payments) for a date range, receipts, approved owner statement lines, and arrears ageing at a date. At most a year per file; every download audited; formula injection guarded; UTF-8 with a byte-order mark for Excel. Package-specific layouts (Sage, Xero) once the agency's package is known. |
 | D117 | Who sees reports | Admins and accounts see the whole agency; agents see their portfolio and cannot export. |
+
+## 2026-10-09 — Inspections (Phase 3, step 7)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D118 | What an inspection is | One ingoing and one outgoing inspection per lease (Rental Housing Act s5(2)–(4)), done by admins and portfolio agents. A room-by-room checklist built from the unit's bedrooms and bathrooms (entrance and passage, lounge, kitchen, each bedroom and bathroom, outside with keys handed over), with items added as needed. Each item gets a condition (good, fair, poor, damaged, missing, N/A), notes and photos. Who was present is recorded. |
+| D119 | Outgoing against ingoing | The outgoing inspection starts from the ingoing one's items and shows each item's move-in condition; items now in a worse condition are flagged in red on screen and in the report. AWDRent does not work out deposit deductions from them: the agent uses the report when settling the deposit (D57). |
+| D120 | Completing | Every item must be rated. Completing freezes the inspection, its items and its photos (database triggers and the service), files a branded PDF report (with up to 60 photos) as a lease document, and emails it to every tenant on the lease whatever their opt-ins, as a record they need. The report is not e-signed: the tenant can raise disagreements with the agent, as is common practice. To be confirmed with the user. |
+| D121 | Mistakes | A draft inspection can be deleted once its photos are removed. A completed inspection cannot be changed or deleted; if the report could not be built at the time, staff can build and send it from the inspection page. |
