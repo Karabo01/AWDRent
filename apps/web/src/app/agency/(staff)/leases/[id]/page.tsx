@@ -13,6 +13,7 @@ import { actorOf, load } from "@/server/actor";
 import { requireCan } from "@/server/session";
 import { AccountCard } from "./account-card";
 import { DepositCard } from "./deposit-card";
+import { InspectionsCard } from "./inspections-card";
 import { PopsCard } from "./pops-card";
 import { RemindersCard } from "./reminders-card";
 import { SigningCard } from "./signing-card";
@@ -133,6 +134,7 @@ export default async function LeasePage({
       <PopsCard session={s} leaseId={l.id} result={pop} />
       {live ? <RemindersCard lease={l} canPause={can(s.user.role, "reminders.pause")} /> : null}
       {can(s.user.role, "documents.view") ? <SigningCard session={s} leaseId={l.id} leaseStatus={l.status} /> : null}
+      {can(s.user.role, "inspections.manage") ? <InspectionsCard session={s} leaseId={l.id} canStart={!s.ctx.readOnly} /> : null}
 
       {canEdit && !closed ? (
         <Card>

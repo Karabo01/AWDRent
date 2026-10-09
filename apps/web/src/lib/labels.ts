@@ -42,6 +42,7 @@ export const DOCUMENT_KIND_LABEL: Record<string, string> = {
   receipt: "Receipt",
   owner_statement: "Owner statement",
   maintenance_photo: "Photo",
+  inspection_photo: "Inspection photo",
   employer_letter: "Employer letter",
   company_registration: "Company registration",
   proof_of_income: "Proof of income",
