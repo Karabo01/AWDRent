@@ -17,3 +17,4 @@ export * from "./portal";
 export * from "./signing";
 export * from "./inbox";
 export * from "./statements";
+export * from "./payouts";

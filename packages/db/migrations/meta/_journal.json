@@ -288,6 +288,20 @@
       "when": 1791548827893,
       "tag": "0040_statement_line_basis",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791550727873,
+      "tag": "0041_payouts",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791550731583,
+      "tag": "0042_payouts_rls",
+      "breakpoints": true
     }
   ]
 }
