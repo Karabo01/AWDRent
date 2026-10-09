@@ -30,6 +30,8 @@ export const owners = pgTable(
     bankAccountHolder: text(),
     bankAccountNoEnc: text(),
     bankAccountNoLast4: text(),
+    // Owner portal access (D104): switched on per owner by staff
+    portalEnabled: boolean().notNull().default(false),
     // How the agency is paid (D91): the first month's rent of each new lease, or a percentage of rent collected
     commissionModel: commissionModel().notNull().default("first_month"),
     // Commission in basis points for the percentage model: 1050 = 10.5% (decision D11)

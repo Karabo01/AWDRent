@@ -1,7 +1,9 @@
-import { boolean, foreignKey, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, check, foreignKey, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { agencyColumn, pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
 import { tenants } from "./leases";
+import { owners } from "./records";
 
 // Tenant portal logins (D41, D76): the third Better Auth instance. No
 // passwords; a one-time code by email or SMS signs in. A portal user belongs
@@ -13,7 +15,9 @@ export const portalUsers = pgTable(
   {
     id: pk(),
     agencyId: agencyColumn().references(() => agencies.id),
-    tenantId: uuid().notNull(),
+    // Exactly one of: the tenant or the owner this login is for (D104)
+    tenantId: uuid(),
+    ownerId: uuid(),
     name: text().notNull(),
     // Required by Better Auth; the tenant's email, or a placeholder for phone-only tenants. Not used to sign in.
     email: text().notNull(),
@@ -26,7 +30,10 @@ export const portalUsers = pgTable(
   (t) => [
     uniqueIndex("portal_users_agency_id_id_key").on(t.agencyId, t.id),
     uniqueIndex("portal_users_agency_tenant_key").on(t.agencyId, t.tenantId),
+    uniqueIndex("portal_users_agency_owner_key").on(t.agencyId, t.ownerId),
     foreignKey({ name: "portal_users_tenant_fk", columns: [t.agencyId, t.tenantId], foreignColumns: [tenants.agencyId, tenants.id] }),
+    foreignKey({ name: "portal_users_owner_fk", columns: [t.agencyId, t.ownerId], foreignColumns: [owners.agencyId, owners.id] }),
+    check("portal_users_one_party", sql`num_nonnulls(${t.tenantId}, ${t.ownerId}) = 1`),
   ],
 );
 
