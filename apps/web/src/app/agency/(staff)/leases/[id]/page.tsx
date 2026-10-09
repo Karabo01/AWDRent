@@ -15,6 +15,7 @@ import { AccountCard } from "./account-card";
 import { DepositCard } from "./deposit-card";
 import { PopsCard } from "./pops-card";
 import { RemindersCard } from "./reminders-card";
+import { SigningCard } from "./signing-card";
 import { AmendLeaseForm, LeaseStepButton, NoticeForm, RenewLeaseForm, TerminateForm } from "../lease-forms";
 
 export const metadata = { title: "Lease" };
@@ -121,6 +122,7 @@ export default async function LeasePage({
       <DepositCard session={s} leaseId={l.id} />
       <PopsCard session={s} leaseId={l.id} result={pop} />
       {live ? <RemindersCard lease={l} canPause={can(s.user.role, "reminders.pause")} /> : null}
+      {can(s.user.role, "documents.view") ? <SigningCard session={s} leaseId={l.id} leaseStatus={l.status} /> : null}
 
       {canEdit && !closed ? (
         <Card>

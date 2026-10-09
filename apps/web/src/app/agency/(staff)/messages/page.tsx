@@ -30,6 +30,8 @@ const STATUS: Record<string, { label: string; variant: "default" | "secondary" |
 };
 
 const CHANNEL: Record<string, string> = { email: "Email", sms: "SMS", whatsapp: "WhatsApp" };
+// Messages sent outside the catalogue, straight away
+const SYSTEM_LABEL: Record<string, string> = { portal_sign_in_code: "Portal sign-in code", signing_code: "Signing code" };
 const dateTime = new Intl.DateTimeFormat("en-ZA", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Johannesburg" });
 
 /** The notification log (spec): what was sent, to whom, on which channel, delivered or failed. */
@@ -98,7 +100,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                   </TableCell>
                   <TableCell className="max-w-md">
                     <div>
-                      <span className="font-medium">{CATALOGUE.get(m.templateKey)?.label ?? m.templateKey}</span>{" "}
+                      <span className="font-medium">{CATALOGUE.get(m.templateKey)?.label ?? SYSTEM_LABEL[m.templateKey] ?? m.templateKey}</span>{" "}
                       <span className="text-xs text-muted-foreground">
                         {CHANNEL[m.channel]}
                         {m.hasAttachment ? " · with attachment" : ""}

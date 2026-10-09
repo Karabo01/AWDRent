@@ -1,6 +1,6 @@
 import { todayInSouthAfrica } from "@awdrent/core/billing";
 import { formatCents } from "@awdrent/core/money";
-import { portalLedger, portalPops, portalReceipts } from "@awdrent/core/portal";
+import { portalLedger, portalPops, portalReceipts, portalSignedDocuments } from "@awdrent/core/portal";
 import { NotFoundError } from "@awdrent/core/portfolio";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -38,6 +38,7 @@ export default async function PortalLeasePage({ params, searchParams }: { params
   const ledger = await orNotFound(portalLedger(t.actor, id));
   const receipts = await portalReceipts(t.actor, id);
   const pops = await portalPops(t.actor, id);
+  const signed = await portalSignedDocuments(t.actor, id);
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -114,6 +115,26 @@ export default async function PortalLeasePage({ params, searchParams }: { params
           )}
         </CardContent>
       </Card>
+
+      {signed.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Signed documents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid gap-2 text-sm" data-testid="portal-signed-documents">
+              {signed.map((d) => (
+                <li key={d.id}>
+                  <a href={`/p/documents/${d.id}`} className="underline">
+                    {d.title}
+                  </a>
+                  {d.completedAt ? ` · signed ${day.format(d.completedAt)}` : ""}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card id="pop">
         <CardHeader>

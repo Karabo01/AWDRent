@@ -99,6 +99,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </Link>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Lease template</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 text-sm">
+            <p className="text-muted-foreground">The lease agreement you prepare and send for signing from each lease.</p>
+            <Link href="/settings/lease-template" className="underline">
+              Edit lease template
+            </Link>
+          </CardContent>
+        </Card>
         <p className="text-sm text-muted-foreground">
           Plan: {s.plan}. SMS sender ID: {s.smsSenderName ?? "default"}. To change your plan, address, EFT prefix or SMS
           sender ID, contact AWDTECH.
