@@ -1,4 +1,5 @@
 import { formatCents } from "@awdrent/core/money";
+import { listInbox } from "@awdrent/core/inbox";
 import { candidateLines, listPops } from "@awdrent/core/pops";
 import Link from "next/link";
 import { PageHeader } from "@/components/shell/app-shell";
@@ -19,12 +20,18 @@ export default async function PaymentsPage() {
   const pending = await load(() => listPops(actor, { status: "pending" }));
   const candidates = await Promise.all(pending.map((p) => load(() => candidateLines(actor, p.pop.id))));
   const reviewed = (await load(() => listPops(actor))).filter((p) => p.pop.status !== "pending").slice(0, 30);
+  const emailed = (await load(() => listInbox(actor))).length;
 
   return (
     <div className="grid gap-6">
       <PageHeader
         title="Proofs of payment"
         description="A proof of payment never changes a balance by itself. Approve it by choosing the trust-account line that shows the money arrived."
+        actions={
+          <Link href="/payments/inbox" className="text-sm underline" data-testid="inbox-link">
+            Emailed{emailed ? ` (${emailed} to do)` : ""}
+          </Link>
+        }
       />
       {pending.length === 0 ? <p className="text-sm text-muted-foreground">No proofs of payment waiting.</p> : null}
       {pending.map(({ pop, eftReference, tenantName, documentStatus, filename }, i) => (

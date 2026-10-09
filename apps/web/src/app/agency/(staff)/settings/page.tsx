@@ -1,5 +1,6 @@
 import { getAgencySettings } from "@awdrent/core/agency-settings";
 import { mask } from "@awdrent/core/crypto";
+import { inboxAddressFor } from "@awdrent/core/inbox";
 import Link from "next/link";
 import { PageHeader } from "@/components/shell/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +98,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Link href="/settings/messages" className="underline">
               Edit message wording
             </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Proofs of payment by email</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 text-sm">
+            <p className="text-muted-foreground">
+              Forward your agency&apos;s pop@ mailbox (the address tenants send proofs of payment to) to this address. Each email arrives in
+              Proofs of payment.
+            </p>
+            <p className="font-mono" data-testid="pop-forward-address">
+              {inboxAddressFor(s.subdomain)}
+            </p>
           </CardContent>
         </Card>
         <Card>
