@@ -31,7 +31,8 @@ export type Action =
   | "messages.view" // the notification log (scoped)
   | "reminders.pause" // pause a lease's overdue reminders (scoped)
   | "documents.prepare" // prepare lease documents and send them for signing (scoped)
-  | "statements.manage"; // owner statements and payouts
+  | "statements.manage" // owner statements and payouts
+  | "maintenance.manage"; // maintenance requests and contractors (scoped)
 
 const MATRIX: Record<Action, readonly StaffRole[]> = {
   "settings.manage": ["admin"],
@@ -57,6 +58,7 @@ const MATRIX: Record<Action, readonly StaffRole[]> = {
   "reminders.pause": ["admin", "agent", "accounts"],
   "documents.prepare": ["admin", "agent"],
   "statements.manage": ["admin", "accounts"],
+  "maintenance.manage": ["admin", "agent"],
 };
 
 export function can(role: StaffRole, action: Action): boolean {

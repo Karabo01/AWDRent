@@ -218,6 +218,30 @@ const entries: CatalogueEntry[] = [
     emailSubject: "Your application for {unit}",
     email: "Hi {name},\n\nYour application for {unit} has been {outcome}. {agent_name} will contact you about next steps.\n\n{agency}",
   },
+  // Maintenance (D100–D103)
+  {
+    key: "maintenance_job",
+    label: "Contractor job card",
+    when: "An agent assigns a contractor",
+    to: "Contractor",
+    channels: ["email"],
+    variables: ["title", "priority", "address", "description", "tenant", "tenant_phone", "agent_name", "agent_phone", "reference"],
+    sms: null,
+    emailSubject: "Job {reference}: {title} at {address}",
+    email:
+      "Hi {name},\n\n{agency} would like you to attend to the following job.\n\nJob: {title} (priority: {priority})\nAddress: {address}\nDetails: {description}\n\nTo arrange access, contact the tenant, {tenant}, on {tenant_phone}.\n\nPlease confirm with {agent_name} on {agent_phone}, quoting job {reference}. Payment is arranged with the property owner as agreed.\n\n{agency}",
+  },
+  {
+    key: "maintenance_new",
+    label: "New maintenance request (internal)",
+    when: "A tenant logs a request in the portal",
+    to: "Agent",
+    channels: ["email"],
+    variables: ["title", "unit", "tenant", "priority", "link"],
+    sms: null,
+    emailSubject: "Maintenance request: {title} at {unit}",
+    email: "{tenant} has logged a maintenance request for {unit}: {title} (priority: {priority}).\n\nOpen it: {link}",
+  },
   // Lease documents and e-signing (D47–D49, D84)
   {
     key: "signing_request",
@@ -293,6 +317,11 @@ export const SAMPLE_VALUES: Record<string, string> = {
   agent_phone: "082 555 0123",
   tenant: "Nomvula Dlamini",
   title: "Leaking geyser",
+  priority: "urgent",
+  address: "Flat 12, Sunset Court, 14 Jan Smuts Avenue, Parktown",
+  description: "Water dripping from the geyser in the roof above the bathroom",
+  tenant_phone: "082 555 0201",
+  reference: "M-1A2B3C",
   status: "technician booked",
   count: "3",
   document: "bank statement",

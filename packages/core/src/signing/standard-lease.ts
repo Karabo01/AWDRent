@@ -97,7 +97,7 @@ export const STANDARD_LEASE: Section[] = [
   },
   {
     heading: "Personal information",
-    body: "The Tenant consents to the Agent and the Landlord processing the Tenant's personal information for the purposes of this lease, including payment records, communication about the lease, and, where agreed, credit checks, in accordance with the Protection of Personal Information Act 4 of 2013. The Tenant may choose how the Agent may contact them, and may ask to see or correct their information.",
+    body: "The Tenant consents to the Agent and the Landlord processing the Tenant's personal information for the purposes of this lease, including payment records, communication about the lease, sharing the Tenant's name and telephone number with contractors so that they can arrange access for repairs, and, where agreed, credit checks, in accordance with the Protection of Personal Information Act 4 of 2013. The Tenant may choose how the Agent may contact them, and may ask to see or correct their information.",
   },
   {
     heading: "Notices and addresses",

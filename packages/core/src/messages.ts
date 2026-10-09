@@ -44,7 +44,11 @@ export interface TenantRecipient {
 }
 
 /** Owners and staff get email only: no SMS cost for business and internal messages (D74). */
-export type Recipient = TenantRecipient | { kind: "owner"; ownerId: string } | { kind: "staff"; userId: string };
+export type Recipient =
+  | TenantRecipient
+  | { kind: "owner"; ownerId: string }
+  | { kind: "staff"; userId: string }
+  | { kind: "contractor"; contractorId: string };
 
 interface ResolvedRecipient {
   kind: Recipient["kind"];
@@ -62,6 +66,11 @@ async function resolve(tx: Tx, recipient: Recipient, agency: Agency, transaction
     const [o] = await tx.select().from(schema.owners).where(eq(schema.owners.id, recipient.ownerId));
     if (!o) throw new NotFoundError("Owner");
     return { kind: "owner", id: o.id, fullName: o.name, channels: ["email"], address: emailOnly(o.email), optOutLink: null };
+  }
+  if (recipient.kind === "contractor") {
+    const [c] = await tx.select().from(schema.contractors).where(eq(schema.contractors.id, recipient.contractorId));
+    if (!c) throw new NotFoundError("Contractor");
+    return { kind: "contractor", id: c.id, fullName: c.name, channels: ["email"], address: emailOnly(c.active ? c.email : null), optOutLink: null };
   }
   if (recipient.kind === "staff") {
     const [u] = await tx.select().from(schema.users).where(eq(schema.users.id, recipient.userId));

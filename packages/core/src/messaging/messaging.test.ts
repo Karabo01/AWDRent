@@ -17,8 +17,8 @@ import {
 import { advancesStatus, clickatellStatus, resendStatus, verifyBasicAuth, verifySvix } from "./webhooks";
 
 describe("catalogue", () => {
-  it("has the spec's 17 messages plus 3 for signing, each fitting one SMS with typical details", () => {
-    expect(CATALOGUE.size).toBe(20);
+  it("has the spec's 17 messages plus 3 for signing and 2 for maintenance, each fitting one SMS with typical details", () => {
+    expect(CATALOGUE.size).toBe(22);
     for (const entry of CATALOGUE.values()) {
       const allowed = allowedVariables(entry);
       expect(unknownVariables(`${entry.sms ?? ""} ${entry.emailSubject} ${entry.email}`, allowed), entry.key).toEqual([]);
