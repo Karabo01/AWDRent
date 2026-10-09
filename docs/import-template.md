@@ -54,7 +54,7 @@ Required columns are in **bold**.
 |--------|-------|
 | **owner_ref** | Your code |
 | **name** | Full or registered name |
-| **commission_percent** | e.g. `10` |
+| commission_percent | e.g. `10` if the owner pays a percentage of rent collected. Leave empty if the agency takes the first month's rent of each new lease. Imported leases never have that fee taken: those tenants were placed before. |
 | kind | `individual` (default), `company` or `trust` |
 | id_or_reg_no | SA ID (checked), passport, or company/trust registration number. Stored encrypted. |
 | email, phone, postal_address | |

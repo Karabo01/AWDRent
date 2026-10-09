@@ -16,6 +16,7 @@ import { DepositCard } from "./deposit-card";
 import { PopsCard } from "./pops-card";
 import { RemindersCard } from "./reminders-card";
 import { SigningCard } from "./signing-card";
+import { LettingFeeToggle } from "../../statements/statement-forms";
 import { AmendLeaseForm, LeaseStepButton, NoticeForm, RenewLeaseForm, TerminateForm } from "../lease-forms";
 
 export const metadata = { title: "Lease" };
@@ -81,6 +82,15 @@ export default async function LeasePage({
               <dd>{l.escalationBps !== null ? `${bpsToPercentString(l.escalationBps)}% on ${l.escalationDate}` : "None"}</dd>
               <dt className="text-muted-foreground">Notice period</dt>
               <dd>{l.noticeDays} days</dd>
+              <dt className="text-muted-foreground">Letting fee</dt>
+              <dd data-testid="letting-fee">
+                {l.lettingFee ? "First month's rent (if the owner pays that way)" : "Not taken on this lease"}
+                {can(s.user.role, "statements.manage") ? (
+                  <div>
+                    <LettingFeeToggle leaseId={l.id} applies={l.lettingFee} />
+                  </div>
+                ) : null}
+              </dd>
               {l.noticeGivenOn ? (
                 <>
                   <dt className="text-muted-foreground">Notice given</dt>

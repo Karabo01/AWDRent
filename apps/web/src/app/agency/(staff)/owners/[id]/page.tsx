@@ -132,7 +132,8 @@ export default async function OwnerPage({
                 email: owner.email,
                 phone: owner.phone,
                 postalAddress: owner.postalAddress,
-                commissionPercent: bpsToPercentString(owner.commissionBps),
+                commissionModel: owner.commissionModel,
+                commissionPercent: owner.commissionModel === "percent" ? bpsToPercentString(owner.commissionBps) : "",
                 vatRegistered: owner.vatRegistered,
                 vatNumber: owner.vatNumber,
                 notes: owner.notes,
@@ -143,7 +144,7 @@ export default async function OwnerPage({
               <dt className="text-muted-foreground">ID / registration</dt>
               <dd className="font-mono">{mask(owner.idOrRegNoLast4)}</dd>
               <dt className="text-muted-foreground">Commission</dt>
-              <dd>{bpsToPercentString(owner.commissionBps)}%</dd>
+              <dd>{owner.commissionModel === "percent" ? `${bpsToPercentString(owner.commissionBps)}% of rent collected` : "First month's rent of each new lease"}</dd>
               <dt className="text-muted-foreground">VAT</dt>
               <dd>{owner.vatRegistered ? `Registered (${owner.vatNumber})` : "Not registered"}</dd>
             </dl>

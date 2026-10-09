@@ -14,6 +14,7 @@ export interface OwnerFormValues {
   email: string | null;
   phone: string | null;
   postalAddress: string | null;
+  commissionModel: "first_month" | "percent";
   commissionPercent: string;
   vatRegistered: boolean;
   vatNumber: string | null;
@@ -65,13 +66,22 @@ export function OwnerForm({ ownerId, values }: { ownerId?: string; values?: Owne
       </div>
       <Field name="postalAddress" label="Postal address" defaultValue={values?.postalAddress} state={state} multiline />
       <div className="grid gap-4 sm:grid-cols-3">
+        <SelectField
+          name="commissionModel"
+          label="Agency is paid"
+          options={[
+            { value: "first_month", label: "The first month's rent of each new lease" },
+            { value: "percent", label: "A percentage of rent collected" },
+          ]}
+          defaultValue={values?.commissionModel ?? "first_month"}
+          state={state}
+        />
         <Field
           name="commissionPercent"
-          label="Commission (%)"
+          label="Percentage (if paid that way)"
           inputMode="decimal"
-          defaultValue={values?.commissionPercent ?? "10"}
+          defaultValue={values?.commissionPercent ?? ""}
           state={state}
-          required
         />
         <SelectField
           name="vatRegistered"

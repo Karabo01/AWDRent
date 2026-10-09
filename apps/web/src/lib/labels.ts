@@ -40,6 +40,7 @@ export const DOCUMENT_KIND_LABEL: Record<string, string> = {
   bank_statement: "Bank statement",
   proof_of_payment: "Proof of payment",
   receipt: "Receipt",
+  owner_statement: "Owner statement",
   confirmation_letter: "Lease confirmation letter",
   other: "Other",
 };

@@ -13,7 +13,8 @@ test.describe("owners", () => {
     await expect(page.getByText("That is not a valid South African ID number.")).toBeVisible();
     await page.getByLabel("ID / registration number").fill("8001015009087");
     await page.getByRole("button", { name: "Create owner" }).click();
-    await expect(page.getByRole("heading", { name })).toBeVisible();
+    // The first visit compiles the page in development
+    await expect(page.getByRole("heading", { name })).toBeVisible({ timeout: 30_000 });
 
     await page.getByText("Edit bank details").click();
     await page.getByLabel("Bank", { exact: true }).fill("Nedbank");
