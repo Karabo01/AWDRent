@@ -4,6 +4,7 @@ import { agencyColumn, createdBy, pk, timestamps, tstz } from "./_columns";
 import { agencies } from "./agencies";
 import { inboundEmails } from "./inbox";
 import { maintenanceRequests } from "./maintenance";
+import { inspectionItems } from "./inspections";
 import { applications } from "./onboarding";
 import { leases, tenants } from "./leases";
 import { owners, properties, units } from "./records";
@@ -25,6 +26,7 @@ export const documentKind = pgEnum("document_kind", [
   "employer_letter",
   "company_registration",
   "proof_of_income",
+  "inspection_photo",
   "other",
 ]);
 
@@ -52,6 +54,8 @@ export const documents = pgTable(
     maintenanceRequestId: uuid(),
     // An applicant's upload (D108); moved to the tenant on approval
     applicationId: uuid(),
+    // A photo of one inspection item (D119)
+    inspectionItemId: uuid(),
     kind: documentKind().notNull(),
     // Original name, cleaned for display and download
     filename: text().notNull(),
@@ -71,7 +75,7 @@ export const documents = pgTable(
   (t) => [
     check(
       "documents_exactly_one_subject",
-      sql`num_nonnulls(${t.ownerId}, ${t.propertyId}, ${t.unitId}, ${t.tenantId}, ${t.leaseId}, ${t.inboundEmailId}, ${t.maintenanceRequestId}, ${t.applicationId}) = 1`,
+      sql`num_nonnulls(${t.ownerId}, ${t.propertyId}, ${t.unitId}, ${t.tenantId}, ${t.leaseId}, ${t.inboundEmailId}, ${t.maintenanceRequestId}, ${t.applicationId}, ${t.inspectionItemId}) = 1`,
     ),
     check("documents_size_limit", sql`${t.sizeBytes} > 0 and ${t.sizeBytes} <= 10485760`),
     check("documents_file_key_prefix", sql`${t.fileKey} like 'agencies/' || ${t.agencyId}::text || '/%'`),
@@ -85,6 +89,8 @@ export const documents = pgTable(
     index("documents_agency_inbound_email_idx").on(t.agencyId, t.inboundEmailId),
     index("documents_agency_maintenance_idx").on(t.agencyId, t.maintenanceRequestId),
     index("documents_agency_application_idx").on(t.agencyId, t.applicationId),
+    index("documents_agency_inspection_item_idx").on(t.agencyId, t.inspectionItemId),
+    foreignKey({ name: "documents_inspection_item_fk", columns: [t.agencyId, t.inspectionItemId], foreignColumns: [inspectionItems.agencyId, inspectionItems.id] }),
     foreignKey({ name: "documents_application_fk", columns: [t.agencyId, t.applicationId], foreignColumns: [applications.agencyId, applications.id] }),
     foreignKey({
       name: "documents_maintenance_request_fk",

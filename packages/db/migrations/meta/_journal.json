@@ -344,6 +344,20 @@
       "when": 1791553025051,
       "tag": "0048_application_token",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1791554496411,
+      "tag": "0049_inspections",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791554500332,
+      "tag": "0050_inspections_rls",
+      "breakpoints": true
     }
   ]
 }
