@@ -54,6 +54,7 @@ const owner = (name: string, extra: Record<string, unknown> = {}) => ({
   email: null,
   phone: null,
   postalAddress: null,
+  commissionModel: "percent" as const,
   commissionPercent: 1000,
   vatRegistered: false,
   vatNumber: null,
@@ -139,7 +140,9 @@ async function seedAgency(spec: (typeof DEMO.agencies)[number], index: number) {
     kind: index === 0 ? "company" : "trust",
     idKind: "other",
     idOrRegNo: index === 0 ? "2015/123456/07" : "IT1234/2010",
-    commissionPercent: 850,
+    // Pays the agency the first month's rent of each new lease (D91)
+    commissionModel: "first_month",
+    commissionPercent: null,
     vatRegistered: true,
     vatNumber: "4123456789",
   });

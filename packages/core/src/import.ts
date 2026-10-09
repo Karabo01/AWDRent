@@ -27,8 +27,10 @@ export type ImportFiles = Partial<Record<ImportFile, string>>;
 
 export const IMPORT_COLUMNS: Record<ImportFile, { required: string[]; optional: string[] }> = {
   owners: {
-    required: ["owner_ref", "name", "commission_percent"],
+    required: ["owner_ref", "name"],
     optional: [
+      // Given: the owner pays that percentage of rent collected; empty: the first month's rent (D91)
+      "commission_percent",
       "kind",
       "id_or_reg_no",
       "email",
@@ -272,6 +274,8 @@ async function buildPlan(actor: Actor, files: ImportFiles, today: string): Promi
       email: r.email ?? "",
       phone: r.phone ?? "",
       postalAddress: r.postal_address ?? "",
+      // A percentage in the file means that owner pays a percentage; otherwise the first month's rent (D91)
+      commissionModel: r.commission_percent?.trim() ? "percent" : "first_month",
       commissionPercent: r.commission_percent ?? "",
       vatRegistered: bool(r.vat_registered),
       vatNumber: r.vat_number ?? "",
@@ -602,7 +606,8 @@ export async function runImport(
         const eftReference = l.eftReference ?? (await nextEftReference(tx, actor.ctx.agencyId));
         const [lease] = await tx
           .insert(schema.leases)
-          .values({ ...l.values, unitId, eftReference, status: l.status })
+          // Existing tenancies: the agency took any letting fee in its previous system (D92)
+          .values({ ...l.values, unitId, eftReference, status: l.status, lettingFee: false })
           .returning();
         await tx.insert(schema.leaseTenants).values([
           { leaseId: lease!.id, tenantId: tenantIds.get(l.primaryRef.toLowerCase())!, isPrimary: true },

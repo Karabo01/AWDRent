@@ -33,14 +33,20 @@ export const ownerSchema = z
       .transform((s) => s || null),
     phone: optionalText(30),
     postalAddress: optionalText(300),
-    commissionPercent: z.string().transform((s, ctx) => {
-      const bps = parsePercentToBps(s);
-      if (bps === null) {
-        ctx.addIssue({ code: "custom", message: "Enter a percentage like 10 or 8.5" });
-        return z.NEVER;
-      }
-      return bps;
-    }),
+    // D91: the first month's rent of each new lease, or a percentage of rent collected
+    commissionModel: z.enum(["first_month", "percent"]).default("first_month"),
+    commissionPercent: z
+      .string()
+      .default("")
+      .transform((s, ctx) => {
+        if (!s.trim()) return null;
+        const bps = parsePercentToBps(s);
+        if (bps === null) {
+          ctx.addIssue({ code: "custom", message: "Enter a percentage like 10 or 8.5" });
+          return z.NEVER;
+        }
+        return bps;
+      }),
     vatRegistered: z.enum(["true", "false"]).transform((v) => v === "true"),
     vatNumber: optionalText(20),
     notes: optionalText(2000),
@@ -50,9 +56,13 @@ export const ownerSchema = z
       const problem = identityNumberProblem(v.idOrRegNo, v.kind === "individual" ? v.idKind : "other");
       if (problem) ctx.addIssue({ code: "custom", path: ["idOrRegNo"], message: problem });
     }
+    if (v.commissionModel === "percent" && !v.commissionPercent) {
+      ctx.addIssue({ code: "custom", path: ["commissionPercent"], message: "Enter the agreed percentage" });
+    }
     if (v.vatRegistered && !v.vatNumber) ctx.addIssue({ code: "custom", path: ["vatNumber"], message: "Enter the VAT number" });
   });
-export type OwnerInput = z.infer<typeof ownerSchema>;
+/** The model is optional for callers; it defaults to the first month's rent, as in the database. */
+export type OwnerInput = Omit<z.infer<typeof ownerSchema>, "commissionModel"> & { commissionModel?: "first_month" | "percent" };
 
 export const ownerBankSchema = z.object({
   bankName: z.string().trim().min(2).max(80),
@@ -80,6 +90,7 @@ function present(o: typeof schema.owners.$inferSelect) {
     bankBranchCode: o.bankBranchCode,
     bankAccountHolder: o.bankAccountHolder,
     bankAccountNoLast4: o.bankAccountNoLast4,
+    commissionModel: o.commissionModel,
     commissionBps: o.commissionBps,
     vatRegistered: o.vatRegistered,
     vatNumber: o.vatNumber,
@@ -142,7 +153,8 @@ function ownerColumns(input: OwnerInput) {
     email: input.email,
     phone: input.phone,
     postalAddress: input.postalAddress,
-    commissionBps: input.commissionPercent,
+    commissionModel: input.commissionModel ?? "first_month",
+    commissionBps: input.commissionModel === "percent" ? (input.commissionPercent ?? 0) : 0,
     vatRegistered: input.vatRegistered,
     vatNumber: input.vatRegistered ? input.vatNumber : null,
     notes: input.notes,
