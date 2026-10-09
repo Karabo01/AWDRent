@@ -239,6 +239,20 @@
       "when": 1791502578179,
       "tag": "0033_portal_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791517978667,
+      "tag": "0034_signing",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791517982467,
+      "tag": "0035_signing_rls",
+      "breakpoints": true
     }
   ]
 }
