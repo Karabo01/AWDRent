@@ -1,3 +1,4 @@
+/* global process, console */
 // drizzle-kit writes foreign keys before the unique indexes they reference,
 // which Postgres refuses for composite (agency_id, id) keys (D13). This moves
 // every CREATE UNIQUE INDEX in a generated migration to just before its first
