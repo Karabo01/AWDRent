@@ -5,7 +5,7 @@ import { z } from "zod";
 import { audit } from "./audit";
 import { scanBuffer } from "./clamav";
 import { cleanFilename, detectFileType } from "./file-types";
-import type { Action } from "./permissions";
+import { type Action, ForbiddenError } from "./permissions";
 import {
   type Actor,
   assertLeaseInScope,
@@ -68,7 +68,7 @@ async function assertSubjectInScope(tx: Tx, actor: Actor, subject: Subject): Pro
     case "lease":
       return assertLeaseInScope(tx, actor, subject.id);
     case "inspection_item": {
-      // In scope when the inspection's lease is; photos only while the inspection is open
+      // In scope when the inspection's lease is (photos change only while it is open: subjectIsOpen)
       const [row] = await tx
         .select({ leaseId: schema.inspections.leaseId })
         .from(schema.inspectionItems)
@@ -125,6 +125,17 @@ export async function listDocuments(actor: Actor, subject: Subject) {
   });
 }
 
+/** A completed inspection's photos are part of its record: none added or removed after. */
+async function subjectIsOpen(tx: Tx, subject: Subject): Promise<boolean> {
+  if (subject.type !== "inspection_item") return true;
+  const [row] = await tx
+    .select({ status: schema.inspections.status })
+    .from(schema.inspectionItems)
+    .innerJoin(schema.inspections, eq(schema.inspections.id, schema.inspectionItems.inspectionId))
+    .where(eq(schema.inspectionItems.id, subject.id));
+  return row?.status !== "completed";
+}
+
 /**
  * Checks and stores an upload in quarantine and records it as pending.
  * Returns the document id; the caller queues the scan.
@@ -135,7 +146,10 @@ export async function uploadDocument(
   permission: Action = "documents.upload",
 ): Promise<string> {
   authorise(actor, permission);
-  return storeUpload(actor.ctx, input, (tx) => assertSubjectInScope(tx, actor, input.subject));
+  return storeUpload(actor.ctx, input, async (tx) => {
+    await assertSubjectInScope(tx, actor, input.subject);
+    if (!(await subjectIsOpen(tx, input.subject))) throw new UploadRejectedError("This inspection is completed: photos can no longer be added.");
+  });
 }
 
 /**
@@ -271,6 +285,7 @@ export async function deleteDocument(actor: Actor, documentId: string): Promise<
       .for("update");
     if (!d) throw new NotFoundError("Document");
     await assertSubjectInScope(tx, actor, subjectOf(d));
+    if (!(await subjectIsOpen(tx, subjectOf(d)))) throw new ForbiddenError("documents.delete");
     await tx.update(schema.documents).set({ deletedAt: sql`now()` }).where(eq(schema.documents.id, documentId));
     await audit(tx, { action: "document.deleted", entity: "document", entityId: documentId, before: { filename: d.filename, kind: d.kind } });
     return d.fileKey;

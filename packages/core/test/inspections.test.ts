@@ -6,7 +6,8 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createAgencyWithAdmin } from "../../db/test/fixtures";
 import { monthStart, todayInSouthAfrica } from "../src/billing";
-import { uploadDocument } from "../src/documents";
+import { deleteDocument, UploadRejectedError, uploadDocument } from "../src/documents";
+import { ForbiddenError } from "../src/permissions";
 import { addItem, completeInspection, defaultChecklist, getInspection, InspectionError, saveInspection, startInspection, worse } from "../src/inspections";
 import { activateLease, createLease } from "../src/leases";
 import { createOwner } from "../src/owners";
@@ -142,6 +143,10 @@ describe("inspections", () => {
     await expect(
       withAgency(adminA.ctx, (tx) => tx.update(schema.inspectionItems).set({ condition: "good" }).where(eq(schema.inspectionItems.id, stove.id))),
     ).rejects.toThrow();
+    await expect(
+      uploadDocument(adminA, { subject: { type: "inspection_item", id: stove.id }, kind: "inspection_photo", filename: "late.png", bytes: PNG }),
+    ).rejects.toBeInstanceOf(UploadRejectedError);
+    await expect(deleteDocument(adminA, photo)).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it("starts the outgoing inspection from the ingoing one and flags what got worse", async () => {
