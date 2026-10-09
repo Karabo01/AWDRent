@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, randomInt, timingSafeEqual } from "node:crypto";
 import { env } from "@awdrent/config";
 import { parseHost } from "@awdrent/core/hosts";
-import { ensurePortalUser, findSignInTarget, parseSignInIdentifier, sendSignInCode } from "@awdrent/core/portal";
+import { ensureOwnerPortalUser, ensurePortalUser, findSignInTarget, parseSignInIdentifier, sendSignInCode } from "@awdrent/core/portal";
 import { authDb, publicAgencyBySubdomain, schema } from "@awdrent/db";
 import { betterAuth, type BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -39,7 +39,8 @@ interface StoredCode {
   /** Codes sent in the current window, and when it started */
   n: number;
   f: number;
-  tenantId: string;
+  kind: "tenant" | "owner";
+  partyId: string;
 }
 
 const hashCode = (key: string, code: string) => createHmac("sha256", env().PORTAL_AUTH_SECRET).update(`${key}:${code}`).digest("base64url");
@@ -59,22 +60,22 @@ function portalOtp() {
     endpoints: {
       sendPortalCode: createAuthEndpoint(
         "/otp/send",
-        { method: "POST", body: z.object({ identifier: z.string().max(254) }) },
+        { method: "POST", body: z.object({ identifier: z.string().max(254), audience: z.enum(["tenant", "owner"]).default("tenant") }) },
         async (ctx) => {
           const agency = await agencyOfRequest(ctx);
           const id = parseSignInIdentifier(ctx.body.identifier);
           if (!agency) throw new APIError("NOT_FOUND");
           if (!id) throw new APIError("BAD_REQUEST", { message: "Enter the email address or mobile number your agent has for you." });
           const done = ctx.json({ ok: true });
-          const target = await findSignInTarget(agency.id, id);
+          const target = await findSignInTarget(agency.id, id, ctx.body.audience);
           if (!target) return done;
-          const key = `portal-otp:${agency.id}:${id.kind}:${id.value}`;
+          const key = `portal-otp:${agency.id}:${ctx.body.audience}:${id.kind}:${id.value}`;
           const existing = await ctx.context.internalAdapter.findVerificationValue(key);
           const previous = existing ? (JSON.parse(existing.value) as StoredCode) : null;
           const inWindow = previous && Date.now() - previous.f < SEND_WINDOW_MS;
           if (inWindow && previous.n >= maxSends()) return done;
           const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-          const stored: StoredCode = { h: hashCode(key, code), a: 0, n: inWindow ? previous.n + 1 : 1, f: inWindow ? previous.f : Date.now(), tenantId: target.tenantId };
+          const stored: StoredCode = { h: hashCode(key, code), a: 0, n: inWindow ? previous.n + 1 : 1, f: inWindow ? previous.f : Date.now(), kind: target.kind, partyId: target.partyId };
           await ctx.context.internalAdapter.deleteVerificationByIdentifier(key);
           await ctx.context.internalAdapter.createVerificationValue({
             identifier: key,
@@ -93,13 +94,16 @@ function portalOtp() {
       ),
       verifyPortalCode: createAuthEndpoint(
         "/otp/verify",
-        { method: "POST", body: z.object({ identifier: z.string().max(254), code: z.string().trim().max(10) }) },
+        {
+          method: "POST",
+          body: z.object({ identifier: z.string().max(254), code: z.string().trim().max(10), audience: z.enum(["tenant", "owner"]).default("tenant") }),
+        },
         async (ctx) => {
           const agency = await agencyOfRequest(ctx);
           const id = parseSignInIdentifier(ctx.body.identifier);
           if (!agency) throw new APIError("NOT_FOUND");
           if (!id || !/^\d{6}$/.test(ctx.body.code)) throw new APIError("BAD_REQUEST", { message: WRONG_CODE });
-          const key = `portal-otp:${agency.id}:${id.kind}:${id.value}`;
+          const key = `portal-otp:${agency.id}:${ctx.body.audience}:${id.kind}:${id.value}`;
           const record = await ctx.context.internalAdapter.findVerificationValue(key);
           if (!record) throw new APIError("BAD_REQUEST", { message: WRONG_CODE });
           const stored = JSON.parse(record.value) as StoredCode;
@@ -118,7 +122,7 @@ function portalOtp() {
           if (!(await ctx.context.internalAdapter.consumeVerificationValue(key))) throw new APIError("BAD_REQUEST", { message: WRONG_CODE });
           let userId: string;
           try {
-            userId = await ensurePortalUser(agency.id, stored.tenantId);
+            userId = stored.kind === "owner" ? await ensureOwnerPortalUser(agency.id, stored.partyId) : await ensurePortalUser(agency.id, stored.partyId);
           } catch {
             throw new APIError("UNAUTHORIZED", { message: "Your portal access is not available. Please contact your agent." });
           }
@@ -158,7 +162,8 @@ function buildPortalAuth() {
     user: {
       additionalFields: {
         agencyId: { type: "string", input: false, required: true },
-        tenantId: { type: "string", input: false, required: true },
+        tenantId: { type: "string", input: false, required: false },
+        ownerId: { type: "string", input: false, required: false },
         active: { type: "boolean", input: false, required: true },
       },
     },

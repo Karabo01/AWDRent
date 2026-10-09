@@ -18,7 +18,7 @@ async function post(path: string, body: unknown): Promise<string | null> {
 }
 
 /** Step 1: email or mobile number. Step 2: the 6-digit code sent there. */
-export function PortalLoginForm({ next }: { next: string }) {
+export function PortalLoginForm({ next, audience = "tenant" }: { next: string; audience?: "tenant" | "owner" }) {
   const [identifier, setIdentifier] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"identify" | "code">("identify");
@@ -32,7 +32,7 @@ export function PortalLoginForm({ next }: { next: string }) {
     e.preventDefault();
     setPending(true);
     setError(null);
-    const problem = await post("/otp/send", { identifier });
+    const problem = await post("/otp/send", { identifier, audience });
     setPending(false);
     if (problem) setError(problem);
     else setStep("code");
@@ -42,7 +42,7 @@ export function PortalLoginForm({ next }: { next: string }) {
     e.preventDefault();
     setPending(true);
     setError(null);
-    const problem = await post("/otp/verify", { identifier, code });
+    const problem = await post("/otp/verify", { identifier, code, audience });
     if (problem) {
       setPending(false);
       setError(problem);
@@ -82,7 +82,7 @@ export function PortalLoginForm({ next }: { next: string }) {
   return (
     <form onSubmit={verify} className="grid gap-4">
       <p role="status" className="text-sm">
-        If {identifier} belongs to one of our tenants, we have sent a 6-digit code {isPhone ? "by SMS" : "by email"}. It is valid for 10 minutes.
+        If {identifier} belongs to one of our {audience === "owner" ? "owners" : "tenants"}, we have sent a 6-digit code {isPhone ? "by SMS" : "by email"}. It is valid for 10 minutes.
       </p>
       <div className="grid gap-1.5">
         <Label htmlFor={codeField}>Code</Label>

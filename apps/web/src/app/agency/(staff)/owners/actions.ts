@@ -4,8 +4,10 @@ import {
   createOwner,
   ownerBankSchema,
   ownerSchema,
+  OwnerPortalError,
   revealOwnerBankAccount,
   setOwnerArchived,
+  setOwnerPortal,
   updateOwner,
   updateOwnerBank,
 } from "@awdrent/core/owners";
@@ -63,4 +65,17 @@ export async function setOwnerArchivedAction(ownerId: string, archived: boolean)
   await mutate(() => setOwnerArchived(actorOf(s), z.uuid().parse(ownerId), archived));
   revalidatePath(`/owners/${ownerId}`);
   revalidatePath("/owners");
+}
+
+export async function setOwnerPortalAction(ownerId: string, enabled: boolean, _prev: FormState): Promise<FormState> {
+  const s = await requireCan("records.edit");
+  try {
+    const failed = await mutate(() => setOwnerPortal(actorOf(s), z.uuid().parse(ownerId), enabled));
+    if (failed) return failed;
+  } catch (err) {
+    if (err instanceof OwnerPortalError) return { error: err.message };
+    throw err;
+  }
+  revalidatePath(`/owners/${ownerId}`);
+  return { ok: true };
 }

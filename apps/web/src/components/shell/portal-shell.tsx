@@ -6,15 +6,20 @@ export function PortalShell({
   logo,
   name,
   signOut,
+  nav: navItems,
+  home = "/p",
   children,
 }: {
   brand: string;
   logo?: string;
   name: string;
   signOut: () => Promise<void>;
+  /** Defaults to the tenant portal's pages */
+  nav?: { href: string; label: string }[];
+  home?: string;
   children: React.ReactNode;
 }) {
-  const nav = [
+  const nav = navItems ?? [
     { href: "/p", label: "My rent" },
     { href: "/p/pay", label: "How to pay" },
     { href: "/p/maintenance", label: "Maintenance" },
@@ -24,7 +29,7 @@ export function PortalShell({
     <div className="min-h-screen bg-muted/30">
       <header className="border-b bg-background">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
-          <Link href="/p" className="flex min-w-0 items-center gap-2 font-semibold text-primary">
+          <Link href={home} className="flex min-w-0 items-center gap-2 font-semibold text-primary">
             {logo ? <img src={logo} alt="" className="h-8 max-w-32 object-contain" /> : null}
             <span className="truncate">{brand}</span>
           </Link>

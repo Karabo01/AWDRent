@@ -220,3 +220,11 @@ Steps: owner statements, owner payouts, maintenance, owner portal, tenant onboar
 | D101 | Who sees what | Admins and the portfolio agents manage requests (accounts do not). The tenant sees their requests and the updates marked for them; status changes always reach them (maintenance_update), internal notes do not. |
 | D102 | Contractors | An agency list (name, trade, email, phone). Assigning one emails a job card with the address, details, priority, the tenant's name and phone so they can arrange access, and the agent to confirm with. The standard lease's personal-information clause now says so. |
 | D103 | Costs | Not recorded: owners pay contractors directly (D93). |
+
+## 2026-10-09 — Owner portal (Phase 3, step 4)
+
+| # | Topic | Decision |
+|---|-------|----------|
+| D104 | Access (completes D41) | Off by default; staff who can edit owners switch it on per owner (who needs an email address or mobile number for the code) and off again, which ends access at once (checked on every request). Owners sign in at `/op` with the same one-time codes as tenants (D76); a portal login is either a tenant's or an owner's, never both, and codes are asked for as one or the other. |
+| D105 | What owners see | Read-only: their properties and units, each current lease's tenants, rent, dates and any overdue rent; their approved statements with the PDFs; and maintenance on their properties (title, status, contractor, dates; not the internal notes). Nothing about other owners' properties. |
+| D106 | Owners' contact | Staff keep owner details up to date; the portal does not let owners change their bank details or contact details (D6 still applies). |

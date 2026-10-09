@@ -5,7 +5,7 @@ import { Field, FormMessage } from "@/components/form/fields";
 import { SelectField } from "@/components/form/select-field";
 import { Button } from "@/components/ui/button";
 import type { FormState } from "@/server/forms";
-import { createOwnerAction, updateOwnerAction, updateOwnerBankAction } from "./actions";
+import { createOwnerAction, setOwnerPortalAction, updateOwnerAction, updateOwnerBankAction } from "./actions";
 
 export interface OwnerFormValues {
   kind: string;
@@ -131,6 +131,18 @@ export function OwnerBankForm({
       <Button type="submit" disabled={pending} className="justify-self-start">
         Save bank details
       </Button>
+    </form>
+  );
+}
+
+export function OwnerPortalToggle({ ownerId, enabled }: { ownerId: string; enabled: boolean }) {
+  const [state, action, pending] = useActionState(setOwnerPortalAction.bind(null, ownerId, !enabled), {});
+  return (
+    <form action={action} className="grid gap-2">
+      <Button type="submit" variant="outline" size="sm" disabled={pending} className="justify-self-start">
+        {enabled ? "Switch the owner portal off" : "Switch the owner portal on"}
+      </Button>
+      <FormMessage state={state} />
     </form>
   );
 }

@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { actorOf, load } from "@/server/actor";
 import { requireCan } from "@/server/session";
 import { revealOwnerBankAction, setOwnerArchivedAction } from "../actions";
-import { OwnerBankForm, OwnerForm } from "../owner-forms";
+import { OwnerBankForm, OwnerForm, OwnerPortalToggle } from "../owner-forms";
 
 export const metadata = { title: "Owner" };
 
@@ -149,6 +149,20 @@ export default async function OwnerPage({
               <dd>{owner.vatRegistered ? `Registered (${owner.vatNumber})` : "Not registered"}</dd>
             </dl>
           )}
+        </CardContent>
+      </Card>
+
+      <Card id="owner-portal">
+        <CardHeader>
+          <CardTitle>Owner portal</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm">
+          <p className="text-muted-foreground" data-testid="owner-portal-status">
+            {owner.portalEnabled
+              ? `On. ${owner.name} signs in at your site's /op page with a code sent to ${owner.email ?? owner.phone}, and can see their properties, statements and maintenance.`
+              : "Off. Switch it on to let the owner see their properties, statements and maintenance online; they sign in with a code, no password."}
+          </p>
+          {canEdit ? <OwnerPortalToggle ownerId={owner.id} enabled={owner.portalEnabled} /> : null}
         </CardContent>
       </Card>
 
