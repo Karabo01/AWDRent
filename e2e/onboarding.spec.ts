@@ -11,6 +11,8 @@ test.describe("tenant onboarding", () => {
   test.use({ storageState: STATE.kgosiAdmin });
 
   test("an agent invites an applicant, who consents, fills in their details, uploads and submits; a file is sent back", async ({ page, browser }) => {
+    // A long flow across two browsers with PDFs: slow under a full run
+    test.slow();
     const name = unique("Applicant");
     await page.goto(hostUrl(KGOSI.subdomain, "/applications/new"));
     await page.getByLabel("Unit").selectOption({ index: 1 });

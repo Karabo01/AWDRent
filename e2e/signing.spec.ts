@@ -37,6 +37,8 @@ test.describe("lease signing", () => {
   test.use({ storageState: STATE.kgosiAdmin });
 
   test("a lease agreement goes out for signing and the first tenant signs with a code and a drawn signature", async ({ page, browser }) => {
+    // A long flow across two browsers with PDFs: slow under a full run
+    test.slow();
     await openLease(page);
     await cancelOpen(page);
     const card = page.locator("#signing");
