@@ -8,6 +8,8 @@ import { users } from "./staff";
 
 export const ownerKind = pgEnum("owner_kind", ["individual", "company", "trust"]);
 
+export const commissionModel = pgEnum("commission_model", ["first_month", "percent"]);
+
 export const owners = pgTable(
   "owners",
   {
@@ -28,7 +30,9 @@ export const owners = pgTable(
     bankAccountHolder: text(),
     bankAccountNoEnc: text(),
     bankAccountNoLast4: text(),
-    // Commission in basis points: 1050 = 10.5% (decision D11)
+    // How the agency is paid (D91): the first month's rent of each new lease, or a percentage of rent collected
+    commissionModel: commissionModel().notNull().default("first_month"),
+    // Commission in basis points for the percentage model: 1050 = 10.5% (decision D11)
     commissionBps: integer().notNull().default(0),
     vatRegistered: boolean().notNull().default(false),
     vatNumber: text(),

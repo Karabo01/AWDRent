@@ -89,6 +89,9 @@ export const leases = pgTable(
     terminationReason: text(),
     // Overdue reminders paused by staff, e.g. for a payment arrangement (spec; D73).
     // Paused while reminders_paused_at is set and today is on or before the until date (if any).
+    // The agency keeps this lease's first month's rent as its fee, for owners on that model (D92).
+    // Off for leases imported from a previous system: those tenants were placed before.
+    lettingFee: boolean().notNull().default(true),
     remindersPausedAt: tstz(),
     remindersPausedUntil: date(),
     remindersPauseReason: text(),

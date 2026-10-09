@@ -1,0 +1,2 @@
+ALTER TABLE "owner_statement_lines" ADD COLUMN "basis" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "owner_statement_lines" ADD CONSTRAINT "owner_statement_lines_basis" CHECK ("owner_statement_lines"."basis" in ('letting_fee', 'percent'));
