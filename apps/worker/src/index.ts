@@ -5,6 +5,7 @@ import { DOCUMENTS_QUEUE, enqueueScan, MAINTENANCE_QUEUE, redisConnection, type 
 import { runDailyBilling } from "@awdrent/core/ledger";
 import { deliverDue } from "@awdrent/core/messages";
 import { runDailyNotices } from "@awdrent/core/notices";
+import { applicationHousekeeping } from "@awdrent/core/onboarding";
 import { readPopInbox } from "./pop-inbox";
 import { issueReceipts } from "@awdrent/core/receipts";
 import { snapshotUsage } from "@awdrent/core/usage";
@@ -19,7 +20,8 @@ import { eq } from "drizzle-orm";
 //   documents    virus scan, then promote or delete (retried 5×, then marked failed)
 //   maintenance  repeatable: daily billing (00:15 and 06:15), receipts (every minute),
 //                daily notices (07:30, catch-up 12:30), message delivery (every 20 s), re-queue stuck scans (every 5 min),
-//                POP inbox over IMAP (every 2 min), usage snapshot (nightly)
+//                POP inbox over IMAP (every 2 min), applications housekeeping (03:00),
+//                usage snapshot (nightly)
 
 const config = env();
 const connection = redisConnection();
@@ -71,6 +73,8 @@ await maintenanceQueue.upsertJobScheduler("issue-receipts", { every: 60_000 }, {
 await maintenanceQueue.upsertJobScheduler("deliver-messages", { every: 20_000 }, { name: "deliver-messages" });
 // Emailed proofs of payment (D37); does nothing until POP_IMAP_HOST is set
 await maintenanceQueue.upsertJobScheduler("pop-inbox", { every: 2 * 60_000 }, { name: "pop-inbox" });
+// Application links expire, 3-day reminders, deletion after the retention period (D111, D112)
+await maintenanceQueue.upsertJobScheduler("applications", { pattern: "0 3 * * *", tz: "Africa/Johannesburg" }, { name: "applications" });
 await maintenanceQueue.upsertJobScheduler("sweep-pending-scans", { every: 5 * 60_000 }, { name: "sweep-pending-scans" });
 // 02:00 SAST
 await maintenanceQueue.upsertJobScheduler("usage-snapshot", { pattern: "0 2 * * *", tz: "Africa/Johannesburg" }, { name: "usage-snapshot" });
@@ -115,6 +119,20 @@ const maintenance = new Worker(
       return { issued };
     }
     if (job.name === "pop-inbox") return readPopInbox();
+    if (job.name === "applications") {
+      const totals = { expired: 0, reminded: 0, purged: 0 };
+      for (const agencyId of agencies) {
+        try {
+          const r = await applicationHousekeeping(agencyId);
+          totals.expired += r.expired;
+          totals.reminded += r.reminded;
+          totals.purged += r.purged;
+        } catch (err) {
+          console.error(`[applications] agency ${agencyId} failed:`, err);
+        }
+      }
+      return totals;
+    }
     if (job.name === "daily-notices") {
       const totals = { notices: 0, messages: 0, failed: 0 };
       for (const agencyId of agencies) {
