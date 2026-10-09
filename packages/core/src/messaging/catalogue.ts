@@ -242,6 +242,19 @@ const entries: CatalogueEntry[] = [
     emailSubject: "Maintenance request: {title} at {unit}",
     email: "{tenant} has logged a maintenance request for {unit}: {title} (priority: {priority}).\n\nOpen it: {link}",
   },
+  // Inspections (D118–D121)
+  {
+    key: "inspection_report",
+    label: "Inspection report",
+    when: "An ingoing or outgoing inspection is completed",
+    to: "Tenant",
+    channels: ["email"],
+    variables: ["inspection", "unit", "date"],
+    sms: null,
+    emailSubject: "Your {inspection} inspection report for {unit}",
+    email:
+      "Hi {name},\n\nThe {inspection} inspection report for {unit}, done on {date}, is attached. Please check it, and let us know in writing within 7 days if anything is missing or you disagree with it.\n\n{agency}",
+  },
   // Lease documents and e-signing (D47–D49, D84)
   {
     key: "signing_request",
@@ -322,6 +335,7 @@ export const SAMPLE_VALUES: Record<string, string> = {
   description: "Water dripping from the geyser in the roof above the bathroom",
   tenant_phone: "082 555 0201",
   reference: "M-1A2B3C",
+  inspection: "ingoing",
   status: "technician booked",
   count: "3",
   document: "bank statement",

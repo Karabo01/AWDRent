@@ -35,7 +35,8 @@ export type Action =
   | "maintenance.manage" // maintenance requests and contractors (scoped)
   | "applications.manage" // tenant applications (scoped)
   | "reports.view" // arrears, occupancy, expiries, collections (scoped)
-  | "exports.run"; // CSV exports for the accounting package
+  | "exports.run" // CSV exports for the accounting package
+  | "inspections.manage"; // ingoing and outgoing inspections (scoped)
 
 const MATRIX: Record<Action, readonly StaffRole[]> = {
   "settings.manage": ["admin"],
@@ -65,6 +66,7 @@ const MATRIX: Record<Action, readonly StaffRole[]> = {
   "applications.manage": ["admin", "agent"],
   "reports.view": ["admin", "agent", "accounts"],
   "exports.run": ["admin", "accounts"],
+  "inspections.manage": ["admin", "agent"],
 };
 
 export function can(role: StaffRole, action: Action): boolean {

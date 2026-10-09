@@ -22,7 +22,7 @@ import { deleteObject, MAX_UPLOAD_BYTES, promote, putQuarantined, readObject, si
 // the worker, then moved to files/. Downloads only for clean files, through
 // a 5-minute signed link, after a portfolio-scoped lookup.
 
-export const SUBJECT_TYPES = ["owner", "property", "unit", "tenant", "lease", "maintenance_request", "application"] as const;
+export const SUBJECT_TYPES = ["owner", "property", "unit", "tenant", "lease", "maintenance_request", "application", "inspection_item"] as const;
 export type SubjectType = (typeof SUBJECT_TYPES)[number];
 export const subjectSchema = z.object({ type: z.enum(SUBJECT_TYPES), id: z.uuid() });
 export type Subject = z.infer<typeof subjectSchema>;
@@ -40,6 +40,7 @@ const SUBJECT_COLUMN = {
   lease: schema.documents.leaseId,
   maintenance_request: schema.documents.maintenanceRequestId,
   application: schema.documents.applicationId,
+  inspection_item: schema.documents.inspectionItemId,
 } as const;
 
 const SUBJECT_KEY = {
@@ -50,6 +51,7 @@ const SUBJECT_KEY = {
   lease: "leaseId",
   maintenance_request: "maintenanceRequestId",
   application: "applicationId",
+  inspection_item: "inspectionItemId",
 } as const;
 
 async function assertSubjectInScope(tx: Tx, actor: Actor, subject: Subject): Promise<void> {
@@ -65,6 +67,17 @@ async function assertSubjectInScope(tx: Tx, actor: Actor, subject: Subject): Pro
       return assertTenantInScope(tx, actor, subject.id);
     case "lease":
       return assertLeaseInScope(tx, actor, subject.id);
+    case "inspection_item": {
+      // In scope when the inspection's lease is; photos only while the inspection is open
+      const [row] = await tx
+        .select({ leaseId: schema.inspections.leaseId })
+        .from(schema.inspectionItems)
+        .innerJoin(schema.inspections, eq(schema.inspections.id, schema.inspectionItems.inspectionId))
+        .where(eq(schema.inspectionItems.id, subject.id));
+      if (!row) throw new NotFoundError("Inspection item");
+      await assertLeaseInScope(tx, actor, row.leaseId);
+      return;
+    }
     case "application": {
       // In scope when its unit is
       const [app] = await tx.select({ unitId: schema.applications.unitId }).from(schema.applications).where(eq(schema.applications.id, subject.id));
