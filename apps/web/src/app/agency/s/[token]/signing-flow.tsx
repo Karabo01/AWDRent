@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useHydrated } from "@/lib/use-hydrated";
 
 async function call(token: string, body: Record<string, unknown>): Promise<{ ok: boolean; data: Record<string, unknown> }> {
   const res = await fetch(`/s/${token}/api`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -86,6 +87,8 @@ export function SigningFlow({ token, name, codeSentTo, verified }: { token: stri
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const hydrated = useHydrated();
+  const busy = pending || !hydrated;
   const ids = { code: useId(), name: useId(), consent: useId(), reason: useId() };
 
   async function run(body: Record<string, unknown>, next: (data: Record<string, unknown>) => void) {
@@ -123,7 +126,7 @@ export function SigningFlow({ token, name, codeSentTo, verified }: { token: stri
       <div className="grid gap-3">
         <p className="text-sm">Read the document first. To sign, we will send a one-time code to {sentTo ?? "you"} to confirm it is you.</p>
         {errorText}
-        <Button disabled={pending} onClick={() => run({ action: "code" }, (d) => (setSentTo(String(d.sentTo ?? sentTo)), setStep("code")))}>
+        <Button disabled={busy} onClick={() => run({ action: "code" }, (d) => (setSentTo(String(d.sentTo ?? sentTo)), setStep("code")))}>
           Send me a code
         </Button>
       </div>
@@ -153,7 +156,7 @@ export function SigningFlow({ token, name, codeSentTo, verified }: { token: stri
           />
         </div>
         {errorText}
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={busy}>
           Confirm
         </Button>
         <button type="button" className="text-sm text-muted-foreground underline" onClick={() => void run({ action: "code" }, () => setError(null))}>
@@ -178,7 +181,7 @@ export function SigningFlow({ token, name, codeSentTo, verified }: { token: stri
         </div>
         {errorText}
         <div className="flex gap-2">
-          <Button type="submit" variant="destructive" disabled={pending}>
+          <Button type="submit" variant="destructive" disabled={busy}>
             Decline to sign
           </Button>
           <Button type="button" variant="ghost" onClick={() => setStep("sign")}>
@@ -210,7 +213,7 @@ export function SigningFlow({ token, name, codeSentTo, verified }: { token: stri
         I have read the document and agree to sign it electronically. My electronic signature has the same effect as my handwritten one.
       </label>
       {errorText}
-      <Button type="submit" disabled={pending || !consent}>
+      <Button type="submit" disabled={busy || !consent}>
         Sign
       </Button>
       <button type="button" className="justify-self-start text-sm text-muted-foreground underline" onClick={() => setStep("decline")}>

@@ -17,6 +17,8 @@ export function SettingsForm({
     trustAccountMasked: string;
     quietHoursStart: string;
     quietHoursEnd: string;
+    applicationLinkDays: number;
+    applicationRetentionDays: number;
     legalName: string | null;
     registrationNo: string | null;
     ffcNumber: string | null;
@@ -59,6 +61,18 @@ export function SettingsForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <Field name="quietHoursStart" label="No messages after" type="time" defaultValue={values.quietHoursStart} state={state} />
         <Field name="quietHoursEnd" label="Until" type="time" defaultValue={values.quietHoursEnd} state={state} />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field name="applicationLinkDays" label="Application links last (days)" type="number" min={1} max={60} defaultValue={values.applicationLinkDays} state={state} />
+        <Field
+          name="applicationRetentionDays"
+          label="Keep documents of applications that did not proceed (days)"
+          type="number"
+          min={30}
+          max={365}
+          defaultValue={values.applicationRetentionDays}
+          state={state}
+        />
       </div>
       <fieldset className="grid gap-4 rounded-md border p-3">
         <legend className="px-1 text-sm font-medium">Business details on receipts, statements and letters</legend>

@@ -78,6 +78,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 trustAccountMasked: mask(s.trustAccountNoLast4),
                 quietHoursStart: s.quietHoursStart,
                 quietHoursEnd: s.quietHoursEnd,
+                applicationLinkDays: s.applicationLinkDays,
+                applicationRetentionDays: s.applicationRetentionDays,
                 legalName: s.legalName,
                 registrationNo: s.registrationNo,
                 ffcNumber: s.ffcNumber,
@@ -112,6 +114,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <p className="font-mono" data-testid="pop-forward-address">
               {inboxAddressFor(s.subdomain)}
             </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Application checklists</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-2 text-sm">
+            <p className="text-muted-foreground">The documents applicants upload, for employed, self-employed and company applicants.</p>
+            <Link href="/settings/checklists" className="underline">
+              Edit checklists
+            </Link>
           </CardContent>
         </Card>
         <Card>

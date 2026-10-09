@@ -3,7 +3,7 @@ import { logoSrc } from "@/lib/branding";
 import { currentAgency } from "@/server/session";
 import { SigningFlow } from "./signing-flow";
 
-export const metadata = { title: "Sign a document", robots: { index: false }, referrer: "no-referrer" as const };
+export const metadata = { title: "Sign a document", robots: { index: false }, referrer: "same-origin" as const };
 export const dynamic = "force-dynamic";
 
 const SIGNER: Record<string, string> = { waiting: "waiting their turn", invited: "asked to sign", signed: "signed", declined: "declined" };

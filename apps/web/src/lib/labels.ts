@@ -42,6 +42,19 @@ export const DOCUMENT_KIND_LABEL: Record<string, string> = {
   receipt: "Receipt",
   owner_statement: "Owner statement",
   maintenance_photo: "Photo",
+  employer_letter: "Employer letter",
+  company_registration: "Company registration",
+  proof_of_income: "Proof of income",
   confirmation_letter: "Lease confirmation letter",
   other: "Other",
+};
+
+export const APPLICATION_STATUS_LABEL: Record<string, string> = {
+  invited: "Invited",
+  in_progress: "Being completed",
+  submitted: "Submitted: review",
+  approved: "Approved",
+  declined: "Declined",
+  revoked: "Link revoked",
+  expired: "Link expired",
 };

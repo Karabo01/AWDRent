@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useHydrated } from "@/lib/use-hydrated";
 
 async function post(path: string, body: unknown): Promise<string | null> {
   const res = await fetch(`/api/portal-auth${path}`, {
@@ -24,6 +25,8 @@ export function PortalLoginForm({ next, audience = "tenant" }: { next: string; a
   const [step, setStep] = useState<"identify" | "code">("identify");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const hydrated = useHydrated();
+  const busy = pending || !hydrated;
   const idField = useId();
   const codeField = useId();
   const isPhone = !identifier.includes("@");
@@ -72,7 +75,7 @@ export function PortalLoginForm({ next, audience = "tenant" }: { next: string; a
             {error}
           </p>
         ) : null}
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={busy}>
           Send me a code
         </Button>
       </form>
@@ -101,7 +104,7 @@ export function PortalLoginForm({ next, audience = "tenant" }: { next: string; a
           {error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={busy}>
         Sign in
       </Button>
       <button
