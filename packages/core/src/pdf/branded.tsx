@@ -57,7 +57,18 @@ function legalLine(b: Brand): string {
     .join("  |  ");
 }
 
-export function BrandedDocument({ brand, title, children }: { brand: Brand; title: string; children: ReactNode }) {
+export function BrandedDocument({
+  brand,
+  title,
+  children,
+  extraPages,
+}: {
+  brand: Brand;
+  title: string;
+  children: ReactNode;
+  /** Pages after the branded one, e.g. a signing certificate */
+  extraPages?: ReactNode;
+}) {
   return (
     <Document title={title} author={brand.legalName ?? brand.name} creator="AWDRent" producer="AWDRent">
       <Page size="A4" style={styles.page}>
@@ -78,6 +89,7 @@ export function BrandedDocument({ brand, title, children }: { brand: Brand; titl
         {children}
         <Text style={styles.footer} fixed render={({ pageNumber, totalPages }) => `${legalLine(brand)}   Page ${pageNumber} of ${totalPages}`} />
       </Page>
+      {extraPages}
     </Document>
   );
 }

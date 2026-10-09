@@ -55,7 +55,7 @@ interface ResolvedRecipient {
   optOutLink: string | null;
 }
 
-async function resolve(tx: Tx, recipient: Recipient, agency: Agency): Promise<ResolvedRecipient> {
+async function resolve(tx: Tx, recipient: Recipient, agency: Agency, transactional = false): Promise<ResolvedRecipient> {
   const emailOnly = (email: string | null) => (channel: SendChannel) =>
     channel === "email" ? (email ? { to: email, reason: null } : { to: "", reason: "No email address" }) : { to: "", reason: "Email only" };
   if (recipient.kind === "owner") {
@@ -76,7 +76,7 @@ async function resolve(tx: Tx, recipient: Recipient, agency: Agency): Promise<Re
     id: tenant.id,
     fullName: tenant.fullName,
     channels: LIVE_CHANNELS,
-    address: (channel) => address(channel, tenant),
+    address: (channel) => address(channel, tenant, transactional),
     optOutLink: `${agencyOrigin(agency.subdomain)}/o/${code}`,
   };
 }
@@ -135,16 +135,16 @@ function rendered(
   };
 }
 
-function address(channel: SendChannel, tenant: typeof schema.tenants.$inferSelect): { to: string; reason: string | null } {
+function address(channel: SendChannel, tenant: typeof schema.tenants.$inferSelect, transactional = false): { to: string; reason: string | null } {
   if (channel === "email") {
     if (!tenant.email) return { to: "", reason: "No email address" };
-    if (!tenant.emailOptIn) return { to: tenant.email, reason: "Not opted in to email" };
+    if (!tenant.emailOptIn && !transactional) return { to: tenant.email, reason: "Not opted in to email" };
     return { to: tenant.email, reason: null };
   }
   const msisdn = toMsisdn(tenant.phone);
   if (!tenant.phone) return { to: "", reason: "No phone number" };
   if (!msisdn) return { to: tenant.phone, reason: "Phone number cannot receive SMS" };
-  if (!tenant.smsOptIn) return { to: msisdn, reason: "Not opted in to SMS" };
+  if (!tenant.smsOptIn && !transactional) return { to: msisdn, reason: "Not opted in to SMS" };
   return { to: msisdn, reason: null };
 }
 
@@ -166,12 +166,14 @@ export async function send(
     leaseId?: string | null;
     attachmentDocumentId?: string | null;
     copyOf?: string;
+    /** Needed to conclude something the recipient is part of (e.g. a signing link): sent whatever their opt-ins (D84) */
+    transactional?: boolean;
     now?: Date;
   },
 ): Promise<string> {
   const entry = catalogueEntry(input.templateKey);
   const agency = await ownAgency(tx);
-  const to = await resolve(tx, input.recipient, agency);
+  const to = await resolve(tx, input.recipient, agency, input.transactional);
   const vars: Record<string, string> = {
     name: firstName(to.fullName),
     agency: agency.name,

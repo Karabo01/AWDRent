@@ -29,7 +29,8 @@ export type Action =
   | "deposits.manage" // record deposits received, interest, deductions, refunds
   | "pop.submit" // upload a proof of payment for a tenant (scoped)
   | "messages.view" // the notification log (scoped)
-  | "reminders.pause"; // pause a lease's overdue reminders (scoped)
+  | "reminders.pause" // pause a lease's overdue reminders (scoped)
+  | "documents.prepare"; // prepare lease documents and send them for signing (scoped)
 
 const MATRIX: Record<Action, readonly StaffRole[]> = {
   "settings.manage": ["admin"],
@@ -53,6 +54,7 @@ const MATRIX: Record<Action, readonly StaffRole[]> = {
   "pop.submit": ["admin", "agent", "accounts"],
   "messages.view": ["admin", "agent", "accounts"],
   "reminders.pause": ["admin", "agent", "accounts"],
+  "documents.prepare": ["admin", "agent"],
 };
 
 export function can(role: StaffRole, action: Action): boolean {

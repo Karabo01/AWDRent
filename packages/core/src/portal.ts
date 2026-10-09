@@ -345,3 +345,31 @@ export async function portalSetConsent(actor: PortalActor, input: { email: boole
     await audit(tx, { action: "tenant.consent_changed", entity: "tenant", entityId: actor.tenantId, before, after: { ...after, via: "portal" } });
   });
 }
+
+// ─── Signed lease documents (D47) ──────────────────────────────────────
+
+/** Lease agreements and confirmation letters everyone has signed, for a lease the tenant is on. */
+export async function portalSignedDocuments(actor: PortalActor, leaseId: string) {
+  return withAgency(read(actor), async (tx) => {
+    await assertOnLease(tx, actor, leaseId);
+    return tx
+      .select({ id: schema.signingEnvelopes.id, title: schema.signingEnvelopes.title, completedAt: schema.signingEnvelopes.completedAt })
+      .from(schema.signingEnvelopes)
+      .where(and(eq(schema.signingEnvelopes.leaseId, leaseId), eq(schema.signingEnvelopes.status, "completed")))
+      .orderBy(desc(schema.signingEnvelopes.completedAt));
+  });
+}
+
+export async function portalSignedDocumentUrl(actor: PortalActor, envelopeId: string): Promise<string> {
+  const doc = await withAgency(read(actor), async (tx) => {
+    const [row] = await tx
+      .select({ leaseId: schema.signingEnvelopes.leaseId, doc: schema.documents })
+      .from(schema.signingEnvelopes)
+      .innerJoin(schema.documents, eq(schema.documents.id, schema.signingEnvelopes.signedDocumentId))
+      .where(and(eq(schema.signingEnvelopes.id, envelopeId), eq(schema.signingEnvelopes.status, "completed")));
+    if (!row) throw new NotFoundError("Document");
+    await assertOnLease(tx, actor, row.leaseId);
+    return row.doc;
+  });
+  return signedDownloadUrl(doc.fileKey, actor.ctx.agencyId, doc.filename);
+}

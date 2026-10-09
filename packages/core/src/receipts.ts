@@ -72,7 +72,7 @@ export function paymentCoverage(charges: ChargeLike[], payments: PaymentLike[], 
   return { allocations, creditCents: payment.amountCents - covered };
 }
 
-async function loadBrand(agencyId: string): Promise<Brand> {
+export async function loadBrand(agencyId: string): Promise<Brand> {
   const [a] = await withAgency({ agencyId, readOnly: true }, (tx) => tx.select().from(schema.agencies).where(eq(schema.agencies.id, agencyId)));
   if (!a) throw new Error("agency not found");
   const logo = await logoFile({ id: a.id, logo_key: a.logoKey }).catch(() => null);

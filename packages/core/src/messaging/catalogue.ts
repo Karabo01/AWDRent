@@ -218,6 +218,41 @@ const entries: CatalogueEntry[] = [
     emailSubject: "Your application for {unit}",
     email: "Hi {name},\n\nYour application for {unit} has been {outcome}. {agent_name} will contact you about next steps.\n\n{agency}",
   },
+  // Lease documents and e-signing (D47–D49, D84)
+  {
+    key: "signing_request",
+    label: "Document to sign",
+    when: "A lease document is sent for signing, to each signer in turn",
+    to: "Tenant, owner, agent",
+    channels: ["email", "sms"],
+    variables: ["document", "unit", "link"],
+    sms: "Hi {name}, {agency} has sent you the {document} for {unit} to sign: {link}",
+    emailSubject: "Please sign: {document} for {unit}",
+    email:
+      "Hi {name},\n\n{agency} has sent you the {document} for {unit} to sign electronically.\n\nOpen your personal link to read and sign it: {link}\n\nWe will send a one-time code to confirm it is you. The link is for you only; please do not forward it.\n\n{agency}",
+  },
+  {
+    key: "signing_completed",
+    label: "Document signed by everyone",
+    when: "The last signer signs",
+    to: "Every signer",
+    channels: ["email", "sms"],
+    variables: ["document", "unit"],
+    sms: "The {document} for {unit} has been signed by everyone. We have emailed your copy, or ask {agency} for one.",
+    emailSubject: "Signed: {document} for {unit}",
+    email: "Hi {name},\n\nThe {document} for {unit} has now been signed by everyone. Your signed copy is attached; please keep it safe.\n\n{agency}",
+  },
+  {
+    key: "signing_declined",
+    label: "Signing declined (internal)",
+    when: "A signer declines to sign",
+    to: "The staff member who sent it",
+    channels: ["email"],
+    variables: ["signer", "document", "unit", "reason"],
+    sms: null,
+    emailSubject: "{signer} declined to sign the {document}",
+    email: "{signer} declined to sign the {document} for {unit}: {reason}\n\nThe document has been withdrawn; prepare a new one when ready.",
+  },
 ];
 
 export const CATALOGUE: ReadonlyMap<string, CatalogueEntry> = new Map(entries.map((e) => [e.key, e]));
@@ -250,7 +285,8 @@ export const SAMPLE_VALUES: Record<string, string> = {
   eft_ref: "KL-0042",
   short_link: "kgosi.awdrent.co.za/p/pay",
   portal_link: "kgosi.awdrent.co.za/p",
-  link: "kgosi.awdrent.co.za/r/KL-R000123",
+  link: "kgosi.awdrent.co.za/s/AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+  signer: "Ayanda Khumalo",
   receipt_number: "KL-R000123",
   reason: "amount does not match",
   agent_name: "Thabo Mokoena",
